@@ -1,5 +1,5 @@
 [project]
-name = "auraquery"
+name = "weightloss-rag-pubmed"
 version = "0.1.0"
 description = "RAG-based ChatBot for PubMed Open-Access Medical Literature"
 readme = "README.md"

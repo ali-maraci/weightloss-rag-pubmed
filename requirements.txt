@@ -2,7 +2,7 @@ annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.1
 attrs==25.4.0
--e git+https://github.com/ehsan-abdi/auraquery-rag-pubmed.git@acf2f14fde2d4be3ede5c5d80ae180941b790532#egg=auraquery
+-e .
 backoff==2.2.1
 bcrypt==5.0.0
 beautifulsoup4==4.14.3
