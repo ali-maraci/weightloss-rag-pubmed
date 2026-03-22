@@ -2,9 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 class ArticleMetadata(BaseModel):
-    """
-    Structured metadata extracted from a PubMed article's Medline XML.
-    """
+    """Structured metadata extracted from a PubMed article's Medline XML."""
     pmid: str = Field(description="PubMed ID of the article.")
     doi: Optional[str] = Field(default=None, description="DOI of the article.")
     section: str = Field(description="The section this content belongs to, e.g., 'abstract' or 'body'.")

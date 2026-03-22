@@ -1,4 +1,3 @@
-# app/utils/helpers.py
 import re
 from lxml import etree
 

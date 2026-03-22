@@ -1,12 +1,12 @@
 import logging
-from typing import Optional, List
 import warnings
+from typing import Optional
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.models.schemas import ParsedQuery
 from app.utils.config import settings
-from app.models.schemas import MetadataFilters, ParsedQuery
 
 # Suppress harmless Pydantic serialization warnings caused by OpenAI's structured output
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -14,9 +14,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 logger = logging.getLogger(__name__)
 
 
-# -----------------------------------------------------------------------
-# System Prompt
-# -----------------------------------------------------------------------
 PARSER_SYSTEM_PROMPT = """You are a biomedical query optimization system for hybrid retrieval (BM25 + dense embedding search) over vectorized chunks of PubMed articles related to {medical_subject}.
 Your task is to transform a user query into an optimized retrieval query OR request clarification if the query is critically ambiguous.
 
@@ -77,23 +74,11 @@ ADDITIONAL RULES
 * If a gene name is clearly incorrect but confidently correctable, silently fix it without triggering clarification.
 """
 
-# -----------------------------------------------------------------------
-# Core Logic
-# -----------------------------------------------------------------------
 class QueryParser:
-    """
-    Parses and optimizes raw user queries into structured retrieval objects
-    using an LLM. Handles ambiguity detection and metadata extraction.
-    """
+    """Parses and optimizes raw user queries into structured retrieval objects
+    using an LLM. Handles ambiguity detection and metadata extraction."""
 
     def __init__(self, model_name: str = "gpt-4o-mini", medical_subject: str = "GLP-1 medications and weight loss treatment (semaglutide, tirzepatide, liraglutide, Ozempic, Wegovy, Mounjaro)"):
-        """
-        Initializes the QueryParser with a specific LLM and focus subject.
-
-        Args:
-            model_name (str, optional): The OpenAI model to use. Defaults to "gpt-4o-mini".
-            medical_subject (str, optional): The specific medical domain to optimize for. Defaults to "Hereditary Hemorrhagic Telangiectasia (HHT)".
-        """
         self.medical_subject = medical_subject
         self.llm = ChatOpenAI(
             model=model_name,
@@ -108,16 +93,7 @@ class QueryParser:
         self.chain = self.prompt_template | self.llm
 
     def parse(self, query: str) -> ParsedQuery:
-        """
-        Runs the query parser chain to convert a raw query string into a structured ParsedQuery object.
-
-        Args:
-            query (str): The raw input query from the user.
-
-        Returns:
-            ParsedQuery: A structured Pydantic object containing the optimized query natively 
-            coupled with any unambiguously requested metadata filters, or clarification prompts if needed.
-        """
+        """Converts a raw query string into a structured ParsedQuery object."""
         logger.info(f"Parsing raw query: '{query}'")
         try:
             result: ParsedQuery = self.chain.invoke({

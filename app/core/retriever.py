@@ -1,11 +1,10 @@
-import logging
-from typing import List, Dict, Any, Tuple, Optional
 import datetime
-import re
+import logging
 import math
+import re
+from typing import Any, Dict, List, Tuple
 
 from langchain_core.documents import Document
-from rank_bm25 import BM25Okapi
 
 from app.db.vector_store import AuraVectorStore
 from app.core.query_parser import QueryParser
@@ -16,41 +15,23 @@ logger = logging.getLogger(__name__)
 _PMID_PATTERN = re.compile(r'PMID:?\s*(\d{7,8})', re.IGNORECASE)
 
 class AuraRetriever:
-    """
-    Implements a High-Performance Two-Stage Hybrid Retrieval Pipeline.
-    Stage 1: Index A (Abstracts) -> Selects Top unique PMIDs
-    Stage 2: Index B (Body Text) -> Drills into specifically selected PMIDs
-    Stage 3: Custom Reranking (Methodologies, Recency)
-    Stage 4: Diversity Filtering (Max chunks per paper)
-    """
+    """Two-stage hybrid retrieval pipeline: Index A (abstracts) selects candidate PMIDs,
+    Index B (body text) retrieves chunks, followed by reranking and diversity filtering."""
 
     def __init__(self) -> None:
-        """Initializes the retriever with vector store connection and tunable hyperparameters."""
         self.vector_store = AuraVectorStore()
         self.query_parser = QueryParser()
-        
-        # Adjustable Hyperparameters
+
         self.abstract_top_n: int = 50
         self.chunk_top_k: int = 80
         self.max_chunks_per_article: int = 5
         self.target_return_size: int = 30
 
     def retrieve(self, raw_query: str, bypass_stage_1: bool = False) -> List[Document]:
-        """
-        The main orchestration pipeline for retrieving relevant documents based on a query.
-
-        Args:
-            raw_query (str): The raw user or chat-engine query.
-            bypass_stage_1 (bool, optional): If true, skips abstract filtering and queries Index B globally. Defaults to False.
-
-        Returns:
-            List[Document]: A list of LangChain Document objects representing the most relevant chunks.
-        """
+        """Main retrieval pipeline: parse query, retrieve candidates, rerank, and filter."""
         logger.info(f"Starting retrieval pipeline for query: '{raw_query}' (Bypass Stage 1: {bypass_stage_1})")
-        
-        # 1. Parse Query
+
         parsed_query = self.query_parser.parse(raw_query)
-        
         logger.debug("Parsed query: %s", parsed_query.model_dump())
 
         if parsed_query.clarification_required:
@@ -59,52 +40,44 @@ class AuraRetriever:
                 page_content=f"System Alert: Do not answer the user's question. Instead, ask them this clarification: {parsed_query.clarification_required}",
                 metadata={"type": "clarification"}
             )]
-            
+
         search_term = parsed_query.optimized_query or raw_query
-        
-        # --- EXPLICIT PMID OVERRIDE ---
         extracted_pmids = _PMID_PATTERN.findall(raw_query)
-        
+
         if bypass_stage_1:
             logger.info("Bypassing Stage 1: Executing Global Fallback Search on Index B.")
             raw_chunks = self._stage_2_global_chunk_search(search_term, parsed_query)
             final_chunks = [doc for doc, _ in raw_chunks][:self.target_return_size]
             logger.info(f"Fallback complete. Yielding {len(final_chunks)} chunks directly from Native Hybrid search.")
             return final_chunks
-            
+
         elif extracted_pmids:
             logger.info(f"Explicit PMIDs detected in query: {extracted_pmids}. Bypassing Stage 1.")
             candidate_pmids = list(set(extracted_pmids))
             raw_chunks = self._stage_2_chunk_search(search_term, candidate_pmids)
         else:
-            # 2. Stage 1: Candidate Article Retrieval (Index A)
             candidate_pmids = self._stage_1_abstract_search(search_term, parsed_query)
             if not candidate_pmids:
                 logger.warning("No candidate abstracts found. Aborting retrieval.")
                 return []
-                
-            # 3. Stage 2: Chunk-Level Retrieval (Index B) Restricted to Candidates
             raw_chunks = self._stage_2_chunk_search(search_term, candidate_pmids)
-            
+
         if not raw_chunks:
             logger.warning("No body chunks found for query.")
             return []
-            
-        # 4. Stage 3: Metadata-Aware Reranking
+
         reranked_chunks = self._stage_3_rerank(raw_chunks, parsed_query)
-        
-        # 5. Stage 4: Diversity Filtering
         final_chunks = self._stage_4_diversity_filter(reranked_chunks)
-        
-        logger.info(f"Retrieval complete. Yielding {len(final_chunks)} perfectly curated chunks.")
+
+        logger.info(f"Retrieval complete. Yielding {len(final_chunks)} chunks.")
         return final_chunks
 
     def stream_retrieve(self, raw_query: str, bypass_stage_1: bool = False):
-        """Streaming generator version of retrieve that yields status updates and returns docs."""
+        """Streaming version of retrieve that yields status updates and document results."""
         logger.info(f"Starting stream retrieval pipeline for query: '{raw_query}' (Bypass Stage 1: {bypass_stage_1})")
-        
+
         parsed_query = self.query_parser.parse(raw_query)
-        
+
         if parsed_query.clarification_required:
             logger.warning(f"Ambiguous query detected: {parsed_query.clarification_required}")
             yield {"type": "result", "docs": [Document(
@@ -112,7 +85,7 @@ class AuraRetriever:
                 metadata={"type": "clarification"}
             )]}
             return
-            
+
         search_term = parsed_query.optimized_query or raw_query
         extracted_pmids = _PMID_PATTERN.findall(raw_query)
         
@@ -123,14 +96,13 @@ class AuraRetriever:
             final_chunks = [doc for doc, _ in raw_chunks][:self.target_return_size]
             yield {"type": "result", "docs": final_chunks}
             return
-            
+
         elif extracted_pmids:
             logger.info(f"Explicit PMIDs detected in query: {extracted_pmids}. Bypassing Stage 1.")
             candidate_pmids = list(set(extracted_pmids))
             yield {"type": "status", "message": "Retrieving the relevant articles..."}
             raw_chunks = self._stage_2_chunk_search(search_term, candidate_pmids)
         else:
-            # 2. Stage 1: Candidate Article Retrieval (Index A)
             yield {"type": "status", "message": "Scanning PubMed abstracts..."}
             candidate_pmids = self._stage_1_abstract_search(search_term, parsed_query)
             if not candidate_pmids:
@@ -138,36 +110,23 @@ class AuraRetriever:
                 yield {"type": "fallback_trigger"}
                 yield {"type": "result", "docs": []}
                 return
-                
-            # 3. Stage 2: Chunk-Level Retrieval (Index B) Restricted to Candidates
             yield {"type": "status", "message": "Retrieving the relevant articles..."}
             raw_chunks = self._stage_2_chunk_search(search_term, candidate_pmids)
-            
+
         if not raw_chunks:
             logger.warning("No body chunks found for query. Yielding fallback trigger.")
             yield {"type": "fallback_trigger"}
             yield {"type": "result", "docs": []}
             return
-            
-        # 4. Stage 3: Metadata-Aware Reranking
+
         reranked_chunks = self._stage_3_rerank(raw_chunks, parsed_query)
-        
-        # 5. Stage 4: Diversity Filtering
         final_chunks = self._stage_4_diversity_filter(reranked_chunks)
-        
-        logger.info(f"Stream Retrieval complete. Yielding {len(final_chunks)} perfectly curated chunks.")
+
+        logger.info(f"Stream retrieval complete. Yielding {len(final_chunks)} chunks.")
         yield {"type": "result", "docs": final_chunks}
 
     def _build_qdrant_filter(self, parsed_query: ParsedQuery) -> Any:
-        """
-        Translates the Pydantic MetadataFilters into a Qdrant-compliant models.Filter object.
-
-        Args:
-            parsed_query (ParsedQuery): The parsed query containing metadata filters.
-
-        Returns:
-            Any: A Qdrant models.Filter object or None.
-        """
+        """Translates ParsedQuery metadata filters into a Qdrant models.Filter object."""
         from qdrant_client.http import models
         if not parsed_query.metadata_filters:
             return None
@@ -203,23 +162,14 @@ class AuraRetriever:
                     match=models.MatchValue(value=meta.is_animal)
                 )
             )
-            
+
         if not must_conditions:
             return None
             
         return models.Filter(must=must_conditions)
 
     def _stage_1_abstract_search(self, search_term: str, parsed_query: ParsedQuery) -> List[str]:
-        """
-        Performs Dense/Hybrid Search on Index A (Abstracts) to derive candidate PMIDs.
-
-        Args:
-            search_term (str): The search query.
-            parsed_query (ParsedQuery): The parsed object containing filters.
-
-        Returns:
-            List[str]: A list of candidate PMIDs extracted from the top retrieved abstracts.
-        """
+        """Searches Index A (abstracts) to derive candidate PMIDs."""
         logger.info(f"Executing Stage 1 Search on Index A. Term: '{search_term}'")
         
         stage_1_filter = self._build_qdrant_filter(parsed_query)
@@ -228,7 +178,7 @@ class AuraRetriever:
         if stage_1_filter:
             logger.info(f"Applying strict Stage 1 Qdrant metadata filter.")
             kwargs["filter"] = stage_1_filter
-            
+
         try:
             results = self.vector_store.collection_a.similarity_search_with_relevance_scores(**kwargs)
         except Exception as e:
@@ -237,7 +187,7 @@ class AuraRetriever:
             results = self.vector_store.collection_a.similarity_search_with_relevance_scores(
                 query=search_term, k=self.abstract_top_n * 2
             )
-        
+
         unique_pmids: List[str] = []
         seen: set = set()
         for doc, score in results:
@@ -247,21 +197,12 @@ class AuraRetriever:
                 unique_pmids.append(pmid)
                 if len(unique_pmids) == self.abstract_top_n:
                     break
-                    
+
         logger.info(f"Stage 1 complete. Isolated {len(unique_pmids)} candidate PMIDs.")
         return unique_pmids
 
     def _stage_2_chunk_search(self, search_term: str, candidate_pmids: List[str]) -> List[Tuple[Document, float]]:
-        """
-        Restricts deep body search strictly to the subset of candidate PMIDs using Qdrant MatchAny.
-
-        Args:
-            search_term (str): The term to search within the chunks.
-            candidate_pmids (List[str]): List of PMIDs to restrict the search to.
-
-        Returns:
-            List[Tuple[Document, float]]: List of retrieved documents and their vector similarity scores.
-        """
+        """Searches Index B (body text) restricted to the given candidate PMIDs."""
         from qdrant_client.http import models
         logger.info("Executing Stage 2 Deep Search on Index B.")
         
@@ -273,26 +214,17 @@ class AuraRetriever:
                 )
             ]
         )
-        
+
         dense_results = self.vector_store.collection_b.similarity_search_with_relevance_scores(
             query=search_term,
             k=self.chunk_top_k,
             filter=pmid_filter
         )
-        
+
         return dense_results
 
     def _stage_2_global_chunk_search(self, search_term: str, parsed_query: ParsedQuery) -> List[Tuple[Document, float]]:
-        """
-        Executes a global search directly against all chunks in Index B (Fallback method).
-
-        Args:
-            search_term (str): The search query.
-            parsed_query (ParsedQuery): The parsed query with active metadata filters.
-
-        Returns:
-            List[Tuple[Document, float]]: The raw documents and baseline similarity scores.
-        """
+        """Executes a global fallback search across all chunks in Index B."""
         logger.info("Executing Global Stage 2 Deep Search uniformly across Index B.")
         
         global_filter = self._build_qdrant_filter(parsed_query)
@@ -301,7 +233,7 @@ class AuraRetriever:
         if global_filter:
             logger.info("Applying strict Global Qdrant metadata filter on Index B.")
             kwargs["filter"] = global_filter
-            
+
         try:
             dense_results = self.vector_store.collection_b.similarity_search_with_relevance_scores(**kwargs)
         except Exception as e:
@@ -309,31 +241,20 @@ class AuraRetriever:
             dense_results = self.vector_store.collection_b.similarity_search_with_relevance_scores(
                 query=search_term, k=self.chunk_top_k * 2
             )
-            
+
         return dense_results
 
     def _stage_3_rerank(self, scored_docs: List[Tuple[Document, float]], parsed_query: ParsedQuery) -> List[Tuple[Document, float]]:
-        """
-        Applies algorithmic boosts to favor RCTs, robust methodologies, and recent papers.
-
-        Args:
-            scored_docs (List[Tuple[Document, float]]): The baseline ranked documents.
-            parsed_query (ParsedQuery): Input queries.
-
-        Returns:
-            List[Tuple[Document, float]]: The custom reranked list of documents.
-        """
+        """Applies boosts for publication type, section relevance, and recency."""
         logger.info("Executing Stage 3 Custom Reranking.")
         reranked: List[Tuple[Document, float]] = []
-        
         current_year = datetime.datetime.now().year
-        
+
         for doc, base_score in scored_docs:
             meta = doc.metadata
             final_score = base_score
-            
-            # --- PUBLICATION TYPE WEIGHTING ---
-            pub_types = meta.get("publication_types", "") 
+
+            pub_types = meta.get("publication_types", "")
             if "Meta-Analysis" in pub_types:
                 final_score += 1.00
             elif "Systematic Review" in pub_types:
@@ -349,9 +270,8 @@ class AuraRetriever:
             elif "Case Reports" in pub_types:
                 final_score += 0.50
             else:
-                final_score += 0.60 
-                
-            # --- SECTION WEIGHTING (Index B) ---
+                final_score += 0.60
+
             h2 = meta.get("Header 2", "").lower()
             if "result" in h2:
                 final_score += 1.5
@@ -363,8 +283,7 @@ class AuraRetriever:
                 final_score += 0.5
             elif "introduction" in h2 or "background" in h2:
                 final_score -= 0.5
-                
-            # --- RECENCY BOOST ---
+
             pub_year = meta.get("pub_year", meta.get("publication_year"))
             if pub_year and pub_year != "Unknown":
                 try:
@@ -374,41 +293,31 @@ class AuraRetriever:
                         final_score += recency_weight
                 except ValueError:
                     pass
-                    
+
             doc.metadata["aura_rerank_score"] = final_score
             doc.metadata["aura_base_vector_score"] = base_score
             reranked.append((doc, final_score))
-            
+
         reranked.sort(key=lambda x: x[1], reverse=True)
         return reranked
 
     def _stage_4_diversity_filter(self, ranked_docs: List[Tuple[Document, float]]) -> List[Document]:
-        """
-        Enforces max_chunks per PMID to prevent review articles from dominating the LLM context.
-
-        Args:
-            ranked_docs (List[Tuple[Document, float]]): Custom reranked chunks.
-
-        Returns:
-            List[Document]: Truncated, diverse list of chunks constrained per article.
-        """
+        """Enforces max_chunks per PMID to prevent any single article from dominating."""
         logger.info("Executing Stage 4 Diversity Filtering.")
         final_list: List[Document] = []
         pmid_counts: Dict[str, int] = {}
-        
-        for doc, score in ranked_docs:
+
+        for doc, _ in ranked_docs:
             pmid = doc.metadata.get("pmid", "Unknown")
-            
-            if pmid not in pmid_counts:
-                pmid_counts[pmid] = 0
-                
-            if pmid_counts[pmid] >= self.max_chunks_per_article:
-                continue 
-                
+            count = pmid_counts.get(pmid, 0)
+
+            if count >= self.max_chunks_per_article:
+                continue
+
             final_list.append(doc)
-            pmid_counts[pmid] += 1
-            
+            pmid_counts[pmid] = count + 1
+
             if len(final_list) >= self.target_return_size:
                 break
-                
+
         return final_list

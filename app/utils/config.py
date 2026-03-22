@@ -1,7 +1,5 @@
-# app/utils/config.py
-import os
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -37,11 +35,8 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
-        extra = "ignore"  # Ignore extra env vars not defined here
+        extra = "ignore"
 
-    # -------------------------
-    # Utility
-    # -------------------------
     def create_dirs(self):
         """Ensure all necessary directories exist."""
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -49,8 +44,5 @@ class Settings(BaseSettings):
         self.PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# -------------------------
-# Singleton instance
-# -------------------------
 settings = Settings()
 settings.create_dirs()

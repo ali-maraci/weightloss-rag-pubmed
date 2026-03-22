@@ -1,5 +1,6 @@
 import logging
-from typing import List, Optional
+from typing import List
+
 from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
@@ -10,11 +11,8 @@ from app.utils.config import settings
 logger = logging.getLogger(__name__)
 
 class AuraVectorStore:
-    """
-    Decoupled database wrapper for Qdrant Cloud.
-    Handles embedding and retrieval directly from remote HTTP collections,
-    abstracting away database-specific logic from the rest of the application.
-    """
+    """Database wrapper for Qdrant Cloud. Handles embedding and retrieval
+    from remote HTTP collections, abstracting database-specific logic."""
 
     def __init__(self, embedding_model: str = "text-embedding-3-small"):
         self.embeddings = OpenAIEmbeddings(
@@ -22,14 +20,12 @@ class AuraVectorStore:
             api_key=settings.OPENAI_API_KEY
         )
         self.sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
-        
-        # Connect to the remote Qdrant Cloud cluster
+
         self.client = QdrantClient(
             url=settings.QDRANT_URL,
             api_key=settings.QDRANT_API_KEY
         )
-        
-        # Initialize LangChain wrappers for both index collections
+
         self.collection_a = self._init_collection("aura_index_a_abstracts")
         self.collection_b = self._init_collection("aura_index_b_bodies")
         
@@ -63,7 +59,7 @@ class AuraVectorStore:
         return ids
     
     def fetch_abstracts_by_pmid(self, pmid: str) -> List[Document]:
-        """Check if a PMID already exists in Index A using Qdrant's Scroll API."""
+        """Checks if a PMID exists in Index A and returns matching documents."""
         from qdrant_client.http import models
         results, _ = self.client.scroll(
             collection_name="aura_index_a_abstracts",
@@ -81,12 +77,11 @@ class AuraVectorStore:
         
         if not results:
             return []
-            
+
         docs = []
         for point in results:
-            # Qdrant payload explicitly separates page_content and metadata inside LangChain
             content = point.payload.get("page_content", "")
             meta = point.payload.get("metadata", {})
             docs.append(Document(page_content=content, metadata=meta))
-            
+
         return docs

@@ -1,10 +1,10 @@
-import logging
 import json
-from typing import List, Dict, Any
+import logging
+from typing import Any, Dict, List
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 from app.utils.config import settings
 from app.core.qa_chain import AuraQAChain
@@ -35,17 +35,15 @@ Output: "Can you summarize the findings of Smith [PMID: 40648782] and Jones [PMI
 """
 
 class AuraChatEngine:
-    """
-    Wraps the Phase 3 RAG pipeline in a conversational memory layer.
-    Intercepts the user query, uses an LLM to rewrite it based on chat history, 
-    and then passes the standalone query to the retrieval engine.
-    """
+    """Wraps the RAG pipeline in a conversational memory layer that reformulates
+    queries based on chat history before passing them to the retrieval engine."""
+
     def __init__(self, model_name: str = "gpt-4o-mini"):
         self.qa_chain = AuraQAChain()
         self.llm = ChatOpenAI(
             model=model_name,
             api_key=settings.OPENAI_API_KEY,
-            temperature=0.0 # Strict determinism for reformulation
+            temperature=0.0,
         )
         
         self.sessions: Dict[str, List[Any]] = {}
@@ -68,8 +66,8 @@ class AuraChatEngine:
         """Uses the LLM to resolve pronouns and contextualize the user query."""
         chat_history = self.sessions.get(session_id, [])
         if not chat_history:
-            return user_input # No history to resolve against
-            
+            return user_input
+
         logger.info(f"Reformulating query based on history: '{user_input}'")
         chain = self.reformulation_prompt | self.llm
         
@@ -111,7 +109,5 @@ class AuraChatEngine:
         self._trim_session(session_id)
                 
     def clear_history(self, session_id: str = "default"):
-        """Wipes the current session memory."""
-        if session_id in self.sessions:
-            self.sessions[session_id] = []
+        self.sessions.pop(session_id, None)
         logger.info(f"Chat history cleared for session {session_id}.")
