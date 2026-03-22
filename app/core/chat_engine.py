@@ -18,20 +18,20 @@ CRITICAL RULES:
 1. Look at the immediate Chat History to resolve any pronouns (e.g., "it", "they", "this treatment", "these papers", "their findings") or implicit context in the User's newest Input.
 2. The output MUST be a standalone string that could be typed into Google Scholar without the listener needing to know the chat history.
 3. DO NOT answer the user's question. ONLY output the rewritten query.
-4. If the generic User Input does not require history to be understood (e.g., "What is HHT?"), just output the original input unchanged.
+4. If the generic User Input does not require history to be understood (e.g., "What is semaglutide?"), just output the original input unchanged.
 
 🔥 RULE 5 - MANDATORY PMID PRESERVATION 🔥:
 If the user's follow-up question refers to specific papers, authors, or findings mentioned by the AI in the PREVIOUS TURN (e.g., "Can you summarize their main findings?", "Tell me more about the first paper"), you MUST extract ALL [PMID: XXXXXX] from the AI's historical answer and explicitly append them to your rewritten query in the format 'PMID: XXXXXX'.
 
 Example 1:
-History: User: "Does Bevacizumab help?" -> AI: "Yes, it reduces epistaxis."
+History: User: "Does semaglutide help with weight loss?" -> AI: "Yes, it reduces body weight significantly."
 New Input: "What are its side effects?"
-Output: "What are the side effects of Bevacizumab in HHT patients?"
+Output: "What are the side effects of semaglutide in weight loss treatment?"
 
 Example 2:
-History: User: "Are there papers on loss-of-function?" -> AI: "Yes, Viteri-Noël discusses ENG mutations [PMID: 40648782] and Baysal discusses ACVRL1 [PMID: 31594285]."
+History: User: "Are there papers on GLP-1 and cardiovascular outcomes?" -> AI: "Yes, Smith discusses MACE reduction [PMID: 40648782] and Jones discusses cardiac safety [PMID: 31594285]."
 New Input: "Can you summarize their findings?"
-Output: "Can you summarize the findings of Viteri-Noël [PMID: 40648782] and Baysal [PMID: 31594285] regarding loss-of-function mutations?"
+Output: "Can you summarize the findings of Smith [PMID: 40648782] and Jones [PMID: 31594285] regarding GLP-1 cardiovascular outcomes?"
 """
 
 class AuraChatEngine:
@@ -48,7 +48,6 @@ class AuraChatEngine:
             temperature=0.0 # Strict determinism for reformulation
         )
         
-        # In production (FastAPI), this handles isolated session histories memory locally.
         self.sessions: Dict[str, List[Any]] = {}
         
         self.reformulation_prompt = ChatPromptTemplate.from_messages([
@@ -57,6 +56,14 @@ class AuraChatEngine:
             ("human", "Rewrite this input to be a standalone query: {input}")
         ])
         
+    def _ensure_session(self, session_id: str) -> None:
+        if session_id not in self.sessions:
+            self.sessions[session_id] = []
+
+    def _trim_session(self, session_id: str) -> None:
+        if len(self.sessions[session_id]) > 10:
+            self.sessions[session_id] = self.sessions[session_id][-10:]
+
     def _reformulate_query(self, user_input: str, session_id: str) -> str:
         """Uses the LLM to resolve pronouns and contextualize the user query."""
         chat_history = self.sessions.get(session_id, [])
@@ -76,69 +83,32 @@ class AuraChatEngine:
         return rewritten_query
         
     def chat(self, user_input: str, session_id: str = "default") -> str:
-        """
-        The main interaction point for conversational RAG.
-        1. Reformulate query
-        2. Run RAG pipeline
-        3. Save history
-        4. Return answer
-        """
-        if session_id not in self.sessions:
-            self.sessions[session_id] = []
-            
-        # 1. Reformulate
+        """Non-streaming conversational RAG."""
+        self._ensure_session(session_id)
         standalone_query = self._reformulate_query(user_input, session_id)
-        
-        # 2. Add human message to history AFTER reformulation
         self.sessions[session_id].append(HumanMessage(content=user_input))
-        
-        # 3. Execute the full Phase 3 QA Chain (Parse -> Retrieve -> Generation)
-        # using the perfectly standalone query, so vector search doesn't break.
         answer, strategy = self.qa_chain.query(standalone_query)
-        
-        # 4. Save AI response to history
         self.sessions[session_id].append(AIMessage(content=answer))
-        
-        # Trim history to prevent context bloat (keep last 5 interactions/10 messages)
-        if len(self.sessions[session_id]) > 10: 
-            self.sessions[session_id] = self.sessions[session_id][-10:]
-            
+        self._trim_session(session_id)
         return answer
 
     def stream_chat(self, user_input: str, session_id: str = "default"):
-        """
-        Streaming version of the main interaction point for conversational RAG.
-        Yields SSE json strings and saves the final accumulated answer to history.
-        """
-        if session_id not in self.sessions:
-            self.sessions[session_id] = []
-            
+        """Streaming conversational RAG. Yields SSE json strings."""
+        self._ensure_session(session_id)
         yield json.dumps({"type": "status", "message": "Analyzing query context..."}) + "\n\n"
-        
-        # 1. Reformulate
         standalone_query = self._reformulate_query(user_input, session_id)
-        
-        # 2. Add human message to history AFTER reformulation
         self.sessions[session_id].append(HumanMessage(content=user_input))
-        
-        # 3. Stream the full Phase 3 QA Chain (Parse -> Retrieve -> Generation)
         full_answer = ""
         for chunk_str in self.qa_chain.stream_query(standalone_query):
             yield chunk_str
-            
             try:
                 data = json.loads(chunk_str.strip())
                 if data.get("type") == "token":
                     full_answer += data.get("content", "")
             except json.JSONDecodeError:
                 pass
-                
-        # 4. Save AI response to history
         self.sessions[session_id].append(AIMessage(content=full_answer))
-        
-        # Trim history to prevent context bloat
-        if len(self.sessions[session_id]) > 10: 
-            self.sessions[session_id] = self.sessions[session_id][-10:]
+        self._trim_session(session_id)
                 
     def clear_history(self, session_id: str = "default"):
         """Wipes the current session memory."""

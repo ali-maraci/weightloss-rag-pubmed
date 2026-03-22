@@ -86,7 +86,7 @@ class QueryParser:
     using an LLM. Handles ambiguity detection and metadata extraction.
     """
 
-    def __init__(self, model_name: str = "gpt-4o-mini", medical_subject: str = "Hereditary Hemorrhagic Telangiectasia (HHT)"):
+    def __init__(self, model_name: str = "gpt-4o-mini", medical_subject: str = "GLP-1 medications and weight loss treatment (semaglutide, tirzepatide, liraglutide, Ozempic, Wegovy, Mounjaro)"):
         """
         Initializes the QueryParser with a specific LLM and focus subject.
 
@@ -95,19 +95,16 @@ class QueryParser:
             medical_subject (str, optional): The specific medical domain to optimize for. Defaults to "Hereditary Hemorrhagic Telangiectasia (HHT)".
         """
         self.medical_subject = medical_subject
-        # Initialize the LLM and bind it to our strict Pydantic output schema
         self.llm = ChatOpenAI(
             model=model_name,
             api_key=settings.OPENAI_API_KEY,
-            temperature=0.0 # Strict determinism for parsing
+            temperature=0.0
         ).with_structured_output(ParsedQuery)
-        
+
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", PARSER_SYSTEM_PROMPT),
             ("human", "Raw User Query: {query}")
         ])
-        
-        # LCEL Chain
         self.chain = self.prompt_template | self.llm
 
     def parse(self, query: str) -> ParsedQuery:

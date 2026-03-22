@@ -13,6 +13,8 @@ from app.models.schemas import ParsedQuery
 
 logger = logging.getLogger(__name__)
 
+_PMID_PATTERN = re.compile(r'PMID:?\s*(\d{7,8})', re.IGNORECASE)
+
 class AuraRetriever:
     """
     Implements a High-Performance Two-Stage Hybrid Retrieval Pipeline.
@@ -49,12 +51,7 @@ class AuraRetriever:
         # 1. Parse Query
         parsed_query = self.query_parser.parse(raw_query)
         
-        # Print parsed query to terminal for inspection
-        print("\n" + "-"*60)
-        print("🔍 PARSED QUERY INSPECTION:")
-        for k, v in parsed_query.model_dump().items():
-            print(f"  {k}: {v}")
-        print("-" * 60 + "\n")
+        logger.debug("Parsed query: %s", parsed_query.model_dump())
 
         if parsed_query.clarification_required:
             logger.warning(f"Ambiguous query detected: {parsed_query.clarification_required}")
@@ -66,7 +63,7 @@ class AuraRetriever:
         search_term = parsed_query.optimized_query or raw_query
         
         # --- EXPLICIT PMID OVERRIDE ---
-        extracted_pmids = re.findall(r'PMID:?\s*(\d{7,8})', raw_query, re.IGNORECASE)
+        extracted_pmids = _PMID_PATTERN.findall(raw_query)
         
         if bypass_stage_1:
             logger.info("Bypassing Stage 1: Executing Global Fallback Search on Index B.")
@@ -117,7 +114,7 @@ class AuraRetriever:
             return
             
         search_term = parsed_query.optimized_query or raw_query
-        extracted_pmids = re.findall(r'PMID:?\s*(\d{7,8})', raw_query, re.IGNORECASE)
+        extracted_pmids = _PMID_PATTERN.findall(raw_query)
         
         if bypass_stage_1:
             logger.info("Bypassing Stage 1: Executing Global Fallback Search on Index B.")
@@ -242,9 +239,11 @@ class AuraRetriever:
             )
         
         unique_pmids: List[str] = []
+        seen: set = set()
         for doc, score in results:
             pmid = doc.metadata.get("pmid")
-            if pmid and pmid not in unique_pmids:
+            if pmid and pmid not in seen:
+                seen.add(pmid)
                 unique_pmids.append(pmid)
                 if len(unique_pmids) == self.abstract_top_n:
                     break

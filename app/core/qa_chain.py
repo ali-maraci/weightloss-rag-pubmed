@@ -1,5 +1,6 @@
 import logging
 import json
+import re
 import time
 from typing import List, Tuple
 
@@ -248,14 +249,12 @@ class AuraQAChain:
 
     def _standardize_citations(self, text: str) -> str:
         """
-        Forcefully normalizes rogue citation formats back to the strict `[PMID: XXXXXX]` 
-        expected by the Angular frontend parser.
-        Example mapping: 
+        Normalizes rogue citation formats back to the strict `[PMID: XXXXXX]` format
+        expected by the frontend citation renderer.
+        Example mapping:
         `[Smith, 2021; PMID: 123456]` -> `(Smith, 2021) [PMID: 123456]`
         `[PMID: 123, PMID: 456]` -> `[PMID: 123] [PMID: 456]`
         """
-        import re
-        
         # 1. Handle combined author/PMID brackets like [Author, Year; PMID: 123456]
         # Extracts the author/year part and the PMID part, rewriting them.
         pattern_author_combined = r'\[([^\]]*?);\s*PMID:\s*(\d+)\]'
