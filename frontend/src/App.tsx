@@ -22,6 +22,8 @@ function formatMarkdownAndCitations(text: string): string {
   return html;
 }
 
+const EMPTY_AI_MSG: Message = { role: 'ai', content: '', formattedContent: '' };
+
 const welcomeMsg: Message = {
   role: 'ai',
   content: 'Hello! I am your GLP-1 & Weight Loss research assistant. Ask me anything about GLP-1 medications (Ozempic, Wegovy, Mounjaro), their side effects, safety, or nutrition during treatment.',
@@ -56,7 +58,7 @@ export default function App() {
     let aiIndex = -1;
     setMessages(msgs => {
       aiIndex = msgs.length;
-      return [...msgs, { role: 'ai', content: '', formattedContent: '' }];
+      return [...msgs, EMPTY_AI_MSG];
     });
 
     try {
@@ -68,7 +70,7 @@ export default function App() {
           accumulatedText = '';
           setMessages(msgs => {
             const next = [...msgs];
-            next[aiIndex] = { role: 'ai', content: '', formattedContent: '' };
+            next[aiIndex] = EMPTY_AI_MSG;
             return next;
           });
         } else if (event.type === 'status') {
@@ -112,9 +114,14 @@ export default function App() {
     }
   };
 
+  const aiAvatar = (
+    <div className="avatar ai-avatar">
+      <img src="/favicon.ico" alt="WeightLoss RAG" className="avatar-icon" />
+    </div>
+  );
+
   return (
     <div className="app-container">
-      {/* Header */}
       <header className="header">
         <div className="brand-section">
           <div className="logo-container">
@@ -142,7 +149,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Chat Area */}
       <div className="chat-container">
         <div className="chat-history" ref={scrollRef}>
           {messages.map((msg, i) => (
@@ -151,11 +157,7 @@ export default function App() {
               className={`message-wrapper ${msg.role}`}
               style={{ display: msg.role === 'ai' && !msg.content ? 'none' : 'flex' }}
             >
-              {msg.role === 'ai' && msg.content && (
-                <div className="avatar ai-avatar">
-                  <img src="/favicon.ico" alt="WeightLoss RAG" className="avatar-icon" />
-                </div>
-              )}
+              {msg.role === 'ai' && msg.content && aiAvatar}
               {msg.content && (
                 <div className="message-bubble">
                   {msg.role === 'user' ? (
@@ -168,12 +170,9 @@ export default function App() {
             </div>
           ))}
 
-          {/* Thinking animation */}
           {thinkingStatus && (
             <div className="message-wrapper ai">
-              <div className="avatar ai-avatar">
-                <img src="/favicon.ico" alt="WeightLoss RAG" className="avatar-icon" />
-              </div>
+              {aiAvatar}
               <div className="message-bubble thinking-bubble">
                 <div className="thinking-dots">
                   <span /><span /><span />
@@ -184,7 +183,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Input Area */}
         <div className="input-area">
           <TextField
             multiline
@@ -238,7 +236,6 @@ export default function App() {
           />
         </div>
 
-        {/* Footer */}
         <footer className="app-footer">
           <p>&copy; 2026 Ali Maraci. All rights reserved.</p>
           <p>WeightLoss RAG is an experimental research tool and does not provide medical advice.</p>
