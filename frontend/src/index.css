@@ -1,0 +1,45 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  color-scheme: light;
+  background-color: #f5f7fa;
+}
+
+/* Global styles for dangerouslySetInnerHTML content inside .message-bubble */
+.message-bubble p {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.message-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.message-bubble strong {
+  color: color-mix(in srgb, #2cb6aa, black 10%);
+  font-weight: 600;
+}
+
+.message-bubble .pmid-link {
+  display: inline-block;
+  background-color: color-mix(in srgb, #2cb6aa 15%, transparent);
+  color: color-mix(in srgb, #2cb6aa, black 15%);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+  transition: all 0.2s ease;
+}
+
+.message-bubble .pmid-link:hover {
+  background-color: #2cb6aa;
+  color: #ffffff;
+}

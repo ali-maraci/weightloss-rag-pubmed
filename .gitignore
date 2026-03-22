@@ -11,11 +11,17 @@ venv/
 env/
 .pytest_cache/
 *.egg-info/
-auraquery.egg-info/
+weightloss_rag_pubmed.egg-info/
 
 # Data & Models (Do not commit to Git)
 data/
 
-# Accidental Cloud SDK Installations 
+# Accidental Cloud SDK Installations
 Y/
 google-cloud-sdk/
+
+# Frontend
+frontend/.angular/
+frontend/node_modules/
+frontend/dist/
+logs/
