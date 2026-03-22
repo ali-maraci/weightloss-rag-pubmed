@@ -214,6 +214,27 @@ Ensure `firebase.json` has `"public": "dist"` (Vite output, not Angular's `dist/
 
 ---
 
+## How Answers Are Generated
+
+This is a **retrieval-augmented** system, not a pure LLM chatbot. Here is what each component actually does:
+
+| Component | Role |
+|---|---|
+| **Qdrant vector database** | Stores only the PubMed papers you ingested — no external knowledge |
+| **Retrieved chunks** | Injected verbatim into every prompt as the `{context}` block |
+| **`gpt-4o-mini`** | Reads the retrieved chunks and writes the response in natural language |
+| **Citations** | Pulled directly from retrieved document metadata (real PMIDs) |
+
+**The LLM is instructed to answer exclusively from the provided context.** The system prompt explicitly states:
+
+> *"You must answer the user's question based explicitly on the Context Provided. If the context does not contain the answer, state clearly: 'I couldn't find sufficient evidence in the literature to answer this question.' Do not attempt to guess or use outside knowledge."*
+
+If no relevant papers are found in either Index A or the fallback Index B search, the system will say so rather than fabricating an answer.
+
+**Important caveat:** This constraint is enforced by prompt instructions, not by technical guardrails. `gpt-4o-mini` still carries its own training knowledge, and like all instruction-following LLMs, could theoretically ignore the constraint in edge cases. Citations always link to real PubMed articles that were retrieved — if a citation appears in the response, that paper exists in the database and was used as a source.
+
+---
+
 ## Required API Accounts
 
 | Service | Purpose | Free tier |
