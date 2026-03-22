@@ -1,124 +1,225 @@
-# 🧠 AuraQuery: Biomedical RAG Engine
+# WeightLoss RAG — GLP-1 & Weight Loss Research Assistant
 
-AuraQuery is an advanced, production-grade Conversational Retrieval-Augmented Generation (RAG) system engineered specifically for searching, analyzing, and synthesizing open-access biomedical literature from PubMed. 
-
-Instead of relying on general-purpose search, AuraQuery implements a **Four-Stage Hybrid Retrieval Pipeline** backed by sophisticated LLM query optimization and custom citation generation, guaranteeing highly accurate, evidence-based answers with zero hallucination.
-
-The system is built with a decoupled architecture featuring a Python/FastAPI backend and a modern Angular frontend, optimized for scalable deployment on Google Cloud Platform (GCP).
+A conversational RAG (Retrieval-Augmented Generation) system for searching, analysing, and synthesising PubMed literature on GLP-1 medications and weight loss. Ask questions about semaglutide, tirzepatide, Ozempic, Wegovy, Mounjaro, side effects, safety, and nutrition — and get evidence-backed answers with inline citations linked directly to PubMed.
 
 ---
 
-## 🏗️ End-to-End Architecture
+## Architecture Overview
 
-AuraQuery's architecture is decoupled into distinct operational stages spanning data ingestion, retrieval, and conversation management:
+The system is split into three decoupled stages: data pipeline, backend API, and frontend.
 
-### 1. Data Ingestion & Preprocessing
-The ingestion pipeline automates the downloading and initial structuring of academic papers.
-*   **NCBI Entrez Integration (`ncbi_client.py`)**: Fetches PubMed IDs, resolves PubMed Central (PMC) links, and downloads full-text XMLs.
-*   **Medline Parsing (`parser.py`)**: Converts raw XML into structured Pydantic schemas (`ArticleMetadata`), explicitly extracting clinical MeSH terms, publication types, doic/pmid, and author information.
-*   **Cleaning & Combining**: Layers the article abstract and full-text body into a single JSON record.
-
-### 2. Multi-Index Text Chunking
-To balance broad context discovery with deep semantic precision, `AuraChunker` produces two indices:
-*   **Index A (Abstracts)**: Preserves the entire abstract as a single document for wide, conceptual matching.
-*   **Index B (Full Text Body)**: Semantically splits the body by Markdown headers (e.g., Results, Methods), then falls back to recursive character chunking to ensure LLM context limits are respected.
-
-### 3. Hybrid Vectorization & Storage
-AuraQuery relies on **Qdrant Cloud** for high-performance Vector Search, wrapped cleanly in `AuraVectorStore`.
-*   **Dense Embeddings**: Maps semantic meaning using OpenAI's `text-embedding-3-small`.
-*   **Sparse Embeddings (BM25)**: Ensures exact keyword matches (crucial for complex medical/gene terminology) via `FastEmbedSparse`.
-
-### 4. Advanced 4-Stage Query Processing & Retrieval
-The retrieval process is hyper-tuned for clinical accuracy and diversity. It is managed by `QueryParser` and `AuraRetriever`:
-1.  **LLM Query Parsing**: The user's query is analyzed by `gpt-4o-mini`. Ambiguous terms are flagged for user clarification. Otherwise, the query is expanded for Hybrid Search, and strict metadata filters (Authors, Year) are decoupled.
-2.  **Stage 1 - Abstract Discovery**: Searches Index A to find the most conceptually relevant papers (Candidate PMIDs).
-3.  **Stage 2 - Deep Chunk Search**: Drills exclusively into Index B of the Candidate PMIDs to find the specific paragraphs containing the answer.
-4.  **Stage 3 - Algorithmic Reranking**: Boosts chunks based on **Methodology** (e.g., RCTs > Case Reports), **Section** (e.g., Results > Introduction), and **Recency**.
-5.  **Stage 4 - Diversity Filtering**: Caps the number of chunks pulled from any single paper so a single comprehensive review article doesn't drown out novel primary research.
-
-### 5. Chat Engine & Response Generation
-*   **`AuraChatEngine` & Chat History LLM**: Maintains isolated conversational memories. It intercepts conversational follow-ups and explicitly resolves pronouns and historical context (e.g., "What were the side effects of that drug?") into fully standalone search queries using a dedicated **Reformulator LLM**. This ensures the retrieval pipeline never loses context.
-*   **`AuraQAChain`**: Assembles the curated chunks (grouped by PMID) into a strictly formatted prompt. Forces the generation LLM to output professional clinical answers and enforces **high-density in-line citations** mapped directly to the original PMIDs. If no evidence is found, it triggers a global fallback search on Index B before admitting defeat.
-*   **Real-Time Streaming**: The backend utilizes Server-Sent Events (SSE) to stream granular status updates (e.g., "Scanning PubMed abstracts...") followed immediately by the generative LLM token stream, ensuring an ultra-low latency, responsive user experience.
-
-### 6. System Evaluation (LLM-as-a-Judge)
-A rigorous automated evaluation suite is implemented to quantitatively validate the RAG pipeline's accuracy, relevancy, and hallucination rates before pushing updates to production.
-*   **Ground Truth Dataset**: Queries are tested against `data/ground_truth_test_set.json`, an established corpus of highly complex biomedical questions coupled with verified citations and answers.
-*   **LLM-as-a-Judge (`scripts/run_evaluation.py`)**: A powerful LLM acts as an impartial adjudicator (`gpt-4o`). It scores the pipeline's end-to-end outputs across isolated dimensions (e.g., *Context Relevancy, Citation Accuracy, Answer Correctness*) eliminating subjective human-bias from evaluation cycles. Results are compiled and audited continuously into `evaluation_results.csv`.
-
----
-
-## 💻 System Implementation (Frontend & Backend)
-
-### Backend (FastAPI + Google Cloud Run)
-The retrieval architecture detailed above is wrapped in a high-performance **FastAPI** (`app/main.py`) application. It exposes the Chat Engine via REST endpoints, designed to be containerized using the provided `Dockerfile` and deployed seamlessly to **Google Cloud Run** for serverless auto-scaling and high availability. 
-
-### Frontend (Angular + Firebase Hosting)
-The user interface is built as a single-page application using **Angular** (located in the `frontend/` directory). It connects dynamically to the FastAPI backend, implementing modern UI paradigms to handle chat flows, streaming citations, and historical sessions. The frontend is built and deployed directly to **Firebase Hosting** for optimized global asset delivery.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-*   Python 3.10+ & Node.js 18+
-*   OpenAI API Key
-*   NCBI Entrez API Key & Email
-*   Qdrant Cloud URL & API Key
-
-Set these in a `.env` file at the root of the project.
-
-### Running the API
-```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+PubMed (NCBI API)
+      │
+      ▼
+  [1] Ingestion          batch_ingest_weightloss.py
+      Raw XML / JSON  →  data/raw/weightloss/
+      │
+      ▼
+  [2] Chunking           run_chunking.py + AuraChunker
+      Processed JSON  →  data/processed/weightloss/
+      │
+      ▼
+  [3] Embedding          embed_to_qdrant.py + AuraEmbedder
+      Qdrant Cloud    ←  Dense (OpenAI) + Sparse (BM25)
+      │
+      ▼
+  [4] Query Pipeline     FastAPI + LangChain
+      4-stage hybrid retrieval → SSE stream
+      │
+      ▼
+  [5] Frontend           React 19 + Vite + MUI
+      http://localhost:5173
 ```
 
-### Running the Frontend
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19, TypeScript, Vite, MUI v7, SCSS |
+| **Backend** | Python 3.12, FastAPI, Uvicorn |
+| **LLM** | OpenAI `gpt-4o-mini` |
+| **Embeddings** | OpenAI `text-embedding-3-small` (dense), FastEmbedSparse BM25 (sparse) |
+| **Vector DB** | Qdrant Cloud |
+| **Orchestration** | LangChain |
+| **Data source** | PubMed / NCBI Entrez API |
+| **Hosting** | Firebase Hosting (frontend) |
+
+---
+
+## Data Pipeline
+
+### Step 1 — Ingest raw papers from PubMed
+
+```bash
+export PYTHONPATH=$(pwd)
+python scripts/batch_ingest_weightloss.py
+```
+
+Downloads abstracts and full-text XMLs from PubMed using targeted query groups split by era and topic:
+
+- GLP-1 drugs 2010–2016 (exenatide, liraglutide, dulaglutide)
+- GLP-1 drugs 2017–2020 (semaglutide, Ozempic added)
+- GLP-1 drugs 2021–2023 (tirzepatide, Wegovy, Mounjaro)
+- GLP-1 drugs 2024–2026 (latest research)
+- GLP-1 side effects & safety (cardiovascular, pancreatitis, thyroid, tolerability)
+- Nutrition & muscle during GLP-1 (sarcopenia, lean body mass, dietary protein)
+
+Output: `data/raw/weightloss/` — one JSON per PMID. Script is resumable; already-downloaded PMIDs are skipped.
+
+### Step 2 — Chunk and preprocess
+
+```bash
+export PYTHONPATH=$(pwd)
+python scripts/run_chunking.py --folder weightloss
+```
+
+Produces two indices per article:
+- **Index A (Abstracts)** — full abstract as a single document for conceptual matching
+- **Index B (Full Text Body)** — split by Markdown headers (Results, Methods, etc.), then recursive character chunking
+
+Output: `data/processed/weightloss/`
+
+### Step 3 — Embed and upload to Qdrant
+
+```bash
+# One-time: create Qdrant collections
+export PYTHONPATH=$(pwd)
+python scripts/setup_qdrant_collections.py
+
+# Upload embeddings
+python scripts/embed_to_qdrant.py --folder weightloss 2>&1 | tee logs/embed.log
+```
+
+Creates two Qdrant collections:
+- `aura_index_a_abstracts` — 1536-dim cosine + BM25 sparse
+- `aura_index_b_bodies` — 1536-dim cosine + BM25 sparse
+
+Duplicate-safe: checks existing Qdrant points before uploading.
+
+---
+
+## Running the System
+
+### Prerequisites
+
+- Python 3.12 (3.13+ not supported due to `onnxruntime`)
+- Node.js 18+
+- API keys: OpenAI, NCBI Entrez, Qdrant Cloud
+
+Create a `.env` file at the project root:
+
+```env
+OPENAI_API_KEY=sk-...
+NCBI_API_KEY=your_ncbi_key
+NCBI_EMAIL=your@email.com
+QDRANT_URL=https://your-cluster.qdrant.io
+QDRANT_API_KEY=your_qdrant_key
+LANGCHAIN_TRACING_V2=false
+LANGCHAIN_API_KEY=
+LANGCHAIN_PROJECT=weightloss-rag-pubmed
+```
+
+### Backend
+
+```bash
+source venv/bin/activate
+export PYTHONPATH=$(pwd)
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-npm run start
+npm run dev
 ```
 
-### Running the CLI Engine
-You can interface directly with the conversation engine via the terminal without spinning up the frontend:
+Open `http://localhost:5173`.
 
-**Interactive Chat Session:**
-```bash
-python scripts/run_chat.py
-```
+### First-time Python setup
 
-**Single Query Shot:**
 ```bash
-python scripts/run_query.py "What are the common symptoms of Hereditary Hemorrhagic Telangiectasia?"
-```
-
-### Updating the Database (Ingestion)
-To ingest new batches of literature into your Qdrant cluster:
-```bash
-python scripts/batch_ingest_hht.py
+python3.12 -m venv venv
+source venv/bin/activate
+pip install -e .
 ```
 
 ---
 
-## 📂 Project Layout
+## RAG Query Pipeline (4 stages)
 
-```text
-AuraQuery/
+Every user query goes through four retrieval stages before reaching the LLM:
+
+1. **LLM Query Parsing** — `gpt-4o-mini` expands the query for hybrid search and strips metadata filters (author, year) from the semantic query
+2. **Abstract Discovery** — hybrid search on Index A to identify candidate PMIDs
+3. **Deep Chunk Search** — semantic + keyword search on Index B, scoped to candidate PMIDs only
+4. **Reranking + Diversity Filtering** — boosts by study type (RCT > case report), section (Results > Introduction), and recency; caps chunks per paper to prevent single papers from dominating
+
+Responses are streamed token-by-token over SSE with inline citations formatted as `(Author, Year) [PMID: 12345]` — each citation is a clickable PubMed link.
+
+---
+
+## Project Layout
+
+```
+weightloss-rag-pubmed/
 ├── app/
-│   ├── main.py                # FastAPI Application Entry
-│   ├── api/                   # REST API Endpoints
-│   ├── core/                  # Core RAG Logic (Retrieval, Parsing, Chat Engine)
-│   ├── db/                    # Vector Store and NCBI wrappers
-│   ├── models/                # Pydantic Schemas
-│   └── utils/                 # Config & Helpers
-├── frontend/                  # Angular Web Application
-├── scripts/                   # CLI Tools for Search, Ingestion & Evaluation
-├── data/                      # Ground truth evaluation datasets
-├── Dockerfile                 # Backend Containerization
-└── requirements.txt           # Python Dependencies
+│   ├── main.py                    # FastAPI entry point
+│   ├── api/                       # REST + SSE endpoints
+│   ├── core/                      # RAG logic: retriever, chat engine, QA chain
+│   ├── db/                        # Qdrant vector store + NCBI client wrappers
+│   ├── models/                    # Pydantic schemas
+│   └── utils/                     # Config (pydantic-settings)
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                # Main chat component
+│   │   ├── App.scss               # Component styles
+│   │   ├── index.css              # Global styles (citation links, markdown)
+│   │   └── services/
+│   │       └── chatService.ts     # SSE streaming client
+│   ├── vite.config.ts
+│   ├── package.json
+│   └── firebase.json              # Firebase Hosting config (public: dist)
+├── scripts/
+│   ├── batch_ingest_weightloss.py # Step 1: PubMed ingestion
+│   ├── run_chunking.py            # Step 2: chunk + preprocess
+│   ├── setup_qdrant_collections.py # One-time Qdrant setup
+│   ├── embed_to_qdrant.py         # Step 3: embed + upload
+│   ├── run_chat.py                # CLI chat interface
+│   ├── run_query.py               # Single-shot query
+│   └── run_evaluation.py          # LLM-as-a-judge evaluation
+├── data/
+│   ├── raw/weightloss/            # Downloaded PubMed JSONs
+│   └── processed/weightloss/      # Chunked article JSONs
+├── Dockerfile
+├── requirements.txt
+└── pyproject.toml
 ```
 
 ---
 
-*For issues, enhancements, or clinical integrations, please review the issue tracker.*
+## Deploy to Firebase
+
+```bash
+cd frontend
+npm run build
+firebase deploy --only hosting
+```
+
+Ensure `firebase.json` has `"public": "dist"` (Vite output, not Angular's `dist/frontend/browser`).
+
+---
+
+## Required API Accounts
+
+| Service | Purpose | Free tier |
+|---|---|---|
+| [OpenAI](https://platform.openai.com) | LLM (`gpt-4o-mini`) + embeddings | Pay-per-use |
+| [NCBI Entrez](https://www.ncbi.nlm.nih.gov/account/) | PubMed paper download | Free (key increases rate limit) |
+| [Qdrant Cloud](https://cloud.qdrant.io) | Vector database | Free 1GB cluster |
+| [Firebase](https://console.firebase.google.com) | Frontend hosting | Free Spark plan |
+| [LangSmith](https://smith.langchain.com) | Tracing (optional) | Free tier available |
