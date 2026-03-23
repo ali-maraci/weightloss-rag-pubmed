@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 from langchain_core.documents import Document
 
-from app.db.vector_store import AuraVectorStore
+from app.db.vector_store import VectorStore
 from app.core.query_parser import QueryParser
 from app.models.schemas import ParsedQuery
 
@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 _PMID_PATTERN = re.compile(r'PMID:?\s*(\d{7,8})', re.IGNORECASE)
 
-class AuraRetriever:
+class Retriever:
     """Two-stage hybrid retrieval pipeline: Index A (abstracts) selects candidate PMIDs,
     Index B (body text) retrieves chunks, followed by reranking and diversity filtering."""
 
     def __init__(self) -> None:
-        self.vector_store = AuraVectorStore()
+        self.vector_store = VectorStore()
         self.query_parser = QueryParser()
 
         self.abstract_top_n: int = 50
@@ -294,8 +294,8 @@ class AuraRetriever:
                 except ValueError:
                     pass
 
-            doc.metadata["aura_rerank_score"] = final_score
-            doc.metadata["aura_base_vector_score"] = base_score
+            doc.metadata["rerank_score"] = final_score
+            doc.metadata["base_vector_score"] = base_score
             reranked.append((doc, final_score))
 
         reranked.sort(key=lambda x: x[1], reverse=True)

@@ -3,9 +3,9 @@ from typing import Dict, Any, List
 from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
-class AuraChunker:
+class Chunker:
     """
-    Handles the chunking of AuraQuery articles into two layers:
+    Handles the chunking of articles into two layers:
     Index A: Abstract (single document)
     Index B: Body (markdown-header semantic chunks + fallback token overlapping)
     """

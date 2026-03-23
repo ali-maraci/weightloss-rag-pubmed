@@ -1,6 +1,6 @@
 """
 Reads processed JSON files from data/processed/weightloss/ and embeds
-them directly into Qdrant Cloud using AuraEmbedder.
+them directly into Qdrant Cloud using Embedder.
 Skips any PMIDs already present in Qdrant to allow safe re-runs.
 """
 import json
@@ -8,7 +8,7 @@ import logging
 import argparse
 from pathlib import Path
 
-from app.core.embedder import AuraEmbedder
+from app.core.embedder import Embedder
 from app.utils.config import settings
 from app.utils.logging import setup_logging
 
@@ -29,7 +29,7 @@ def main(folder_name: str):
         return
 
     logger.info(f"Found {len(json_files)} processed files. Starting embedding...")
-    embedder = AuraEmbedder()
+    embedder = Embedder()
 
     success, skipped, failed = 0, 0, 0
 
@@ -41,7 +41,7 @@ def main(folder_name: str):
             result = embedder.ingest_article(article_data)
 
             if result:
-                # AuraEmbedder returns True for both newly embedded and skipped (already exists)
+                # Embedder returns True for both newly embedded and skipped (already exists)
                 success += 1
             else:
                 failed += 1

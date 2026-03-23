@@ -4,16 +4,16 @@ import sys
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.chat_engine import AuraChatEngine
+from app.core.chat_engine import ChatEngine
 
 def main():
     print("=" * 80)
-    print("🧠 AuraQuery Conversational RAG Engine")
+    print("🧠 WeightLoss RAG Conversational Engine")
     print("Type 'quit' or 'exit' to end the session.")
     print("Type 'clear' to wipe the conversational memory.")
     print("=" * 80 + "\n")
     
-    chat_engine = AuraChatEngine()
+    chat_engine = ChatEngine()
     
     while True:
         try:

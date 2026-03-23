@@ -65,7 +65,7 @@ def migrate_collection(chroma_name: str, qdrant_name: str, qdrant_client: Qdrant
         
         # Extremely Important for LangChain Metadata Filtering:
         # We must explicitly tell Qdrant to build a fast-lookup index for our specific metadata fields
-        # because our AuraRetriever uses exact MatchValue and MatchAny filters on them.
+        # because our Retriever uses exact MatchValue and MatchAny filters on them.
         from qdrant_client.http.models import PayloadSchemaType
         qdrant_client.create_payload_index(
             collection_name=qdrant_name,

@@ -17,7 +17,7 @@ from langchain_core.prompts import ChatPromptTemplate
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.utils.config import settings
-from app.core.chat_engine import AuraChatEngine
+from app.core.chat_engine import ChatEngine
 
 # -----------------------------------------------------------------------
 # Pydantic Schemas
@@ -104,7 +104,7 @@ class RAGEvaluator:
     def __init__(self, raw_data_dir: str = "data/raw/hht", sample_size: int = 10):
         self.raw_data_dir = Path(raw_data_dir)
         self.sample_size = sample_size
-        self.chat_engine = AuraChatEngine()
+        self.chat_engine = ChatEngine()
         
         # Generator LLM (Needs advanced reasoning to follow strict non-generic instructions; use gpt-4o-mini for budget)
         self.generator_llm = ChatOpenAI(
@@ -327,7 +327,7 @@ class RAGEvaluator:
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="AuraQuery RAG Evaluation Framework")
+    parser = argparse.ArgumentParser(description="WeightLoss RAG Evaluation Framework")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
     
     # Generate Command

@@ -7,38 +7,38 @@ backgroundColor: "#f8f9fa"
 style: |
   section {
     font-family: 'Inter', 'Helvetica Neue', sans-serif;
-    font-size: 22px; 
+    font-size: 22px;
     color: #333;
   }
   h1 { color: #1a5f7a; font-size: 2.2em; margin-top: 0px; margin-bottom: 0.2em; border-bottom: 3px solid #e05e5e; padding-bottom: 10px;}
   h2 { color: #227c9d; font-size: 1.5em; margin-top: 0; }
   h3 { color: #e05e5e; font-size: 1.2em; }
   .highlight { background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-  
+
   /* Flexbox Layouts for Visual Contrast */
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  
+
   /* Pros & Cons Boxes */
   .pro-box { background: #e8f5e9; padding: 15px; border-radius: 12px; border-left: 6px solid #4caf50; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
   .con-box { background: #ffebee; padding: 15px; border-radius: 12px; border-left: 6px solid #f44336; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
   .info-box { background: #e3f2fd; padding: 15px; border-radius: 12px; border-left: 6px solid #2196f3; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-  
+
   /* Tables */
   table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
   th { background-color: #1a5f7a; color: white; padding: 10px; text-align: left; font-size: 1.0em; }
   td { padding: 10px; border-bottom: 1px solid #eee; background: white; font-size: 0.9em; }
   tr:last-child td { border-bottom: none; }
-  
+
   /* Callouts & Badges */
   .badge { background: #227c9d; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px; }
   .badge-alt { background: #e05e5e; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7em; text-transform: uppercase; }
-  
+
   /* Specific Custom Layouts and Adjustments (Replacing Inline Styles) */
   .pro-box-purple { background: #f3e5f5; border-left-color: #9c27b0; }
   .pro-box-orange { background: #fff3e0; border-left-color: #ff9800; }
   .con-box-gray { background: #f4f4f4; border-left-color: #555; }
   .con-box-orange { background: #fff3e0; border-left-color: #ff9800; }
-  
+
   .text-center { text-align: center; }
   .mt-20 { margin-top: 20px; }
   .mt-15 { margin-top: 15px; }
@@ -58,31 +58,31 @@ style: |
   .text-small { font-size: 0.85em; }
   .text-xsmall { font-size: 0.75em; }
   .text-xxsmall { font-size: 0.6em; }
-  
+
   .line-height-tight { line-height: 1.3; }
-  
+
   .img-rounded { border-radius: 8px; }
   .img-rounded-lg { border-radius: 12px; }
   .img-shadow { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-  
+
   /* Mock UI Box */
   .mock-ui-container { border: 4px solid #227c9d; border-radius: 12px; height: 280px; display: flex; align-items: center; justify-content: center; background: #e3f2fd; color: #1a5f7a; }
   .mock-ui-divider { border-top: 1px solid #1a5f7a; width: 50%; margin: 10px auto; }
-  
+
   /* Code and Pre */
   pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 10px; font-size: 0.85em; overflow-x: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
 ---
 
 <!-- _class: lead -->
-# Formulating Dr. Aura 🧬
-## An End-to-End Walkthrough of RAG Engineering over PubMed
+# WeightLoss RAG 🧬
+## An End-to-End RAG System over PubMed for GLP-1 & Weight Loss Research
 
-**Ehsan Abdi**
-**4 March 2026**
+**Ali Maraci**
+**23 March 2026**
 
 ---
 
-# AuraQuery System Overview
+# System Overview
 
 <div class="mt-20">
   <table>
@@ -92,16 +92,16 @@ style: |
     </tr>
     <tr>
       <td><strong>Domain Focus</strong></td>
-      <td>Biomedical Literature (PubMed)</td>
+      <td>GLP-1 medications & weight loss (semaglutide, tirzepatide, liraglutide, Ozempic, Wegovy, Mounjaro)</td>
     </tr>
     <tr>
-      <td><strong>Estimated Corpus Size</strong></td>
-      <td>~3 Million Tokens (Abstracts + Full Body Texts)</td>
-    </tr>  
+      <td><strong>Corpus Size</strong></td>
+      <td>~5,000 PubMed papers (abstracts + full-text body chunks)</td>
+    </tr>
     <tr>
       <td><strong>Chunking Strategy</strong></td>
       <td>Semantic Section-Level (1000 max-tokens, 200 overlap)</td>
-    </tr>      
+    </tr>
     <tr>
       <td><strong>Embedding Model</strong></td>
       <td><code>text-embedding-3-small</code> (OpenAI)</td>
@@ -109,11 +109,11 @@ style: |
     <tr>
       <td><strong>Vector Database</strong></td>
       <td>Qdrant Cloud (Hybrid Search: Dense Vectors + Sparse BM25)</td>
-    </tr>    
+    </tr>
     <tr>
       <td><strong>Retrieval Architecture</strong></td>
       <td>4-Stage Pipeline (Two-Stage Retrieval, Reranking, Diversity Control)</td>
-    </tr>    
+    </tr>
     <tr>
       <td><strong>Primary LLM (Generator/Parser)</strong></td>
       <td><code>gpt-4o-mini</code> (OpenAI)</td>
@@ -124,7 +124,7 @@ style: |
     </tr>
     <tr>
       <td><strong>Core Python Infrastructure</strong></td>
-      <td>FastAPI Backend + Dockerized Environments</td>
+      <td>FastAPI Backend + React 19 Frontend + Firebase Hosting</td>
     </tr>
   </table>
 </div>
@@ -139,12 +139,12 @@ style: |
   <div class="info-box">
     <h3 class="mt-neg-5">🔍 Inherent Characteristics</h3>
     <ul class="mt-neg-5">
-      <li><strong>Terminology & Synonym Explosion:</strong> Medical concepts have dense, overlapping vocabularies (e.g., “HHT,” “Osler–Weber–Rendu”); missing synonyms = missed evidence.</li>
+      <li><strong>Terminology & Synonym Explosion:</strong> Medical concepts have dense, overlapping vocabularies (e.g., "semaglutide," "GLP-1 receptor agonist," "Ozempic"); missing synonyms = missed evidence.</li>
       <li><strong>Evidence Quality & Conflicts:</strong> Mixed study types (case reports → RCTs) with contradictory findings require ranking and context.</li>
       <li><strong>High-Stakes Hallucination Risk:</strong> Small retrieval gaps can yield unsafe conclusions; strict grounding and citations are essential.</li>
     </ul>
   </div>
-  
+
   <div class="pro-box pro-box-purple">
     <h3 class="mt-neg-5">🎓 The RAG Learning Opportunity</h3>
     <ul class="mt-neg-5">
@@ -160,10 +160,10 @@ style: |
 # Data Ingestion & Preprocessing
 
 <div class="info-box mb-20">
-  <strong>The Dataset:</strong> Focused exclusively on Open-Access PMC articles retrieved via the <strong>Biopython Entrez API</strong>.
+  <strong>The Dataset:</strong> Open-access PMC articles retrieved via the <strong>NCBI Entrez API</strong>, covering GLP-1 medications across 6 targeted query groups by era and topic (2010–2026).
 </div>
 
-### The "Two-Tier JSON" Strategy 
+### The "Two-Tier JSON" Strategy
 To optimize retrieval efficiency, the ingested data was split into two discrete indices.
 
 <div class="grid-2">
@@ -179,7 +179,7 @@ To optimize retrieval efficiency, the ingested data was split into two discrete 
 
 ### ✨ Data Transformation
 - **Metadata Preservation:** Maintained key metadata such as *MeSH Keywords*, *Publication Type*, *publication year*, and *journal name* to enable rigid filtering during retrieval.
-- **Recursive Indicators:** Stripped non-essential XML tags and applied markdown indicators (`##`) to demarcate section headers (e.g., `## Introduction`).
+- **Recursive Indicators:** Stripped non-essential XML tags and applied markdown indicators (`##`) to demarcate section headers (e.g., `## Results`).
 
 ---
 
@@ -196,7 +196,7 @@ To optimize retrieval efficiency, the ingested data was split into two discrete 
     </ul>
   </div>
   <div class="info-box">
-    <h3>Index Size Comparison</h3>
+    <h3>Index Size</h3>
     <p>Each chunk inherited the parent document's metadata, alongside an added <code>section_name</code> field.</p>
     <table>
       <tr>
@@ -205,11 +205,11 @@ To optimize retrieval efficiency, the ingested data was split into two discrete 
       </tr>
       <tr>
         <td><strong>Index A</strong> (Abstracts)</td>
-        <td>~888 documents</td>
+        <td>~5,000 documents</td>
       </tr>
       <tr>
         <td><strong>Index B</strong> (Body Chunks)</td>
-        <td>~16,972 chunks</td>
+        <td>~90,000+ chunks</td>
       </tr>
     </table>
   </div>
@@ -276,8 +276,8 @@ Initial phase development commenced with a localized **ChromaDB** instance befor
 * **Role:** An LLM is tasked with reading the <strong>chat history</strong>, <strong>resolving pronouns</strong>, and extracting <strong>explicit identifiers</strong> from previous AI responses into the new query string.
 * **Why it matters:** Vector databases cannot "remember" previous chat context. A query like *"What about its side effects?"* will fail a vector search.
 * **Example:**
-  * **User:** *"What is the standard dosage?"* 
-  * **Interceptor ➔** *"What is the standard dosage for Bevacizumab? PMID: 1234567"*
+  * **User:** *"What is the standard dosage?"*
+  * **Interceptor ➔** *"What is the standard dosage for semaglutide? PMID: 1234567"*
 
 ---
 
@@ -294,7 +294,7 @@ Once the query is contextually resolved, a second lightweight LLM chain prepares
 3. **Chunk-Aware Optimization:** Strips conversational filler to keep the query tight.
 4. **Ambiguity Detection:** Requests user clarification if a term is hopelessly ambiguous.
 5. **Metadata Extraction:** Isolates structured filters using Pydantic models.
-   * **Example:** *"Show me trials from 2024 by Shovlin"* ➔ Extracted Filter: `{ "year": 2024, "author": "Shovlin" }`
+   * **Example:** *"Show me trials from 2024 by Smith"* ➔ Extracted Filter: `{ "year": 2024, "author": "Smith" }`
 
 ---
 
@@ -412,15 +412,15 @@ Once the query is contextually resolved, a second lightweight LLM chain prepares
 
 # The Generator LLM
 
-Following context assembly, a generative model synthezises the final response.
+Following context assembly, a generative model synthesizes the final response.
 
 ### The LLM Selection: `gpt-4o-mini`
 - It provides rapid inference times, is highly cost-effective, and maintains sophisticated instruction-following capabilities relative to its parameter size.
 
 <div class="grid-2 mt-20">
   <div class="con-box con-box-gray">
-    <strong>Temperature Specification (0.0)</strong><br>
-    In biomedical contexts, variance and creativity equate to hallucination risk. Setting the temperature to 0.0 enforces deterministic outputs, anchoring the LLM strictly to the provided evidentiary chunks.
+    <strong>Temperature Specification (0.1)</strong><br>
+    In biomedical contexts, variance and creativity equate to hallucination risk. A near-zero temperature enforces near-deterministic outputs, anchoring the LLM strictly to the provided evidentiary chunks.
   </div>
   <div class="con-box con-box-orange">
     <strong>Strict Grounding Constraint</strong><br>
@@ -432,7 +432,7 @@ Following context assembly, a generative model synthezises the final response.
 
 # Evaluation: Dual LLM-as-a-Judge
 
-*Quantitative validation was performed using an autonomous framework where one LLM family (OpenAI) generates outputs and another (Groq) judges them, structurally eliminating self-preference bias.*
+*Quantitative validation using an autonomous framework where one LLM family (OpenAI) generates outputs and another (Groq) judges them, structurally eliminating self-preference bias.*
 
 <div class="grid-2">
   <div>
@@ -444,25 +444,9 @@ Following context assembly, a generative model synthezises the final response.
     <h3>The Asynchronous Framework</h3>
     <ul>
       <li><strong>Step 1 (Generation):</strong> An LLM (<code>gpt-4o-mini</code>) extracts ground-truth facts from chunks and generates structurally diverse questions into a static test bank JSON.</li>
-      <li><strong>Step 2 (Execution):</strong> The Aura pipeline retrieves context and generates an answer without knowledge of the ground truth.</li>
+      <li><strong>Step 2 (Execution):</strong> The RAG pipeline retrieves context and generates an answer without knowledge of the ground truth.</li>
       <li><strong>Step 3 (Judging):</strong> A separate model family (<code>Llama-3.3-70b-versatile</code> via Groq) scores the final answer against the hidden ground truth, preventing self-preference bias.</li>
     </ul>
-  </div>
-</div>
-
----
-
-# System-Level Evaluation Outcomes
-
-*Evaluating the end-to-end performance of the AuraQuery pipeline across 85 static research questions.*
-
-<div class="pro-box pro-box-purple text-center mt-20 mb-20">
-  <h2 class="mb-20 mt-20 text-center">AVERAGE SYSTEM SCORE: <strong>9.19 / 10.00</strong></h2>
-  <div class="grid-2 text-left" style="font-size: 0.9em; padding: 0 40px;">
-    <div><strong>Total Questions Evaluated:</strong></div><div>85</div>
-    <div><strong>Average Response Latency:</strong></div><div>13.39 seconds</div>
-    <div><strong>Perfect Scores (10/10):</strong></div><div><span style="color: green;">48 (56.5%)</span></div>
-    <div><strong>Zero Scores / Failures:</strong></div><div><span style="color: red;">2 (2.4%)</span></div>
   </div>
 </div>
 
@@ -481,19 +465,19 @@ The system transitioned from a local ChromaDB instance to a managed **Qdrant Clo
 
 ---
 
-# Frontend & Containerization
+# Frontend & Deployment
 
 <div class="grid-2">
   <div>
     <h3>Deployment Infrastructure</h3>
     <ul>
-      <li><strong>Frontend Interface:</strong> Designed around a modern chat-based UI using frameworks applicable for stateful conversations.</li>
-      <li><strong>Backend Excision:</strong> The retrieval engine was decoupled and exposed via a robust <strong>FastAPI</strong> REST endpoint.</li>
-      <li><strong>Containerization:</strong> The application environments were encapsulated within <strong>Docker containers</strong> to guarantee environment parity across deployments.</li>
+      <li><strong>Frontend:</strong> React 19 + Vite + MUI v7 chat interface with real-time SSE token streaming and inline PubMed citation links.</li>
+      <li><strong>Backend:</strong> FastAPI REST endpoint with streaming response support.</li>
+      <li><strong>Hosting:</strong> Firebase Hosting (frontend) with the backend designed for containerized deployment via Docker.</li>
     </ul>
   </div>
   <div class="text-center">
-    <img src="data/presentation/aura-homepage.jpg" alt="Dr. Aura Output" height="530" class="img-rounded-lg img-shadow">
+    <img src="data/presentation/aura-homepage.jpg" alt="WeightLoss RAG UI" height="530" class="img-rounded-lg img-shadow">
   </div>
 </div>
 
@@ -508,7 +492,7 @@ The system transitioned from a local ChromaDB instance to a managed **Qdrant Clo
     <li><strong>Integrate Phoenix:</strong> Add Arize Phoenix in order to perform detailed tracing, optimization, testing, and continuous evaluation.</li>
     <li><strong>Component Optimization:</strong> Optimize chunking strategy, embedding model, query parser, index A & B retrieval, reranker, diversity control, and choice of generator LLM.</li>
     <li><strong>System Optimization:</strong> Optimize the system architecture balancing <strong>cost</strong> vs <strong>latency</strong> vs <strong>accuracy</strong>.</li>
-    <li><strong>Scale Up Corpus:</strong> Increase the size of the corpus from ~3M tokens to ~10M tokens to assess and further optimize retriever performance at scale.</li>
+    <li><strong>Scale Up Corpus:</strong> Expand the corpus beyond 5,000 papers and include additional GLP-1 sub-topics (e.g., paediatric use, drug interactions, long-term outcomes).</li>
   </ul>
 </div>
 

@@ -10,7 +10,7 @@ from app.utils.config import settings
 
 logger = logging.getLogger(__name__)
 
-class AuraVectorStore:
+class VectorStore:
     """Database wrapper for Qdrant Cloud. Handles embedding and retrieval
     from remote HTTP collections, abstracting database-specific logic."""
 
@@ -29,7 +29,7 @@ class AuraVectorStore:
         self.collection_a = self._init_collection("aura_index_a_abstracts")
         self.collection_b = self._init_collection("aura_index_b_bodies")
         
-        logger.info(f"AuraVectorStore initialized pointing to Qdrant Cloud at {settings.QDRANT_URL}")
+        logger.info(f"VectorStore initialized pointing to Qdrant Cloud at {settings.QDRANT_URL}")
 
     def _init_collection(self, collection_name: str) -> QdrantVectorStore:
         """Connects to a specific remote Qdrant collection."""

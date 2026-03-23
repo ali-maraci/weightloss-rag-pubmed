@@ -15,7 +15,7 @@ class NCBIClient:
     def __init__(self) -> None:
         Entrez.email = settings.NCBI_EMAIL
         Entrez.api_key = settings.NCBI_API_KEY
-        self.tool = "AuraQuery"
+        self.tool = "weightloss-rag-pubmed"
 
     def search_pmids(self, query: str, max_results: int = 10, retstart: int = 0) -> List[str]:
         """Searches PubMed via ESearch and returns matching PMIDs."""

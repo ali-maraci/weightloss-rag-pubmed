@@ -4,12 +4,12 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.core.chat_engine import AuraChatEngine
+from app.core.chat_engine import ChatEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-chat_engine = AuraChatEngine()
+chat_engine = ChatEngine()
 
 class QueryRequest(BaseModel):
     query: str
@@ -30,4 +30,4 @@ def stream_chat_response(request: QueryRequest):
 
 @router.get("/health")
 def health_check():
-    return {"status": "AuraQuery API is locked and loaded."}
+    return {"status": "WeightLoss RAG API is ready."}

@@ -2,19 +2,19 @@ import logging
 from typing import Dict, Any, List
 
 from langchain_core.documents import Document
-from app.db.vector_store import AuraVectorStore
+from app.db.vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 
-class AuraEmbedder:
+class Embedder:
     """
-    Business logic for embedding processed AuraQuery articles.
+    Business logic for embedding processed articles.
     Takes clean JSON dictionaries, converts them to LangChain Documents,
-    and coordinates with the AuraVectorStore to embed them.
+    and coordinates with the VectorStore to embed them.
     """
 
     def __init__(self):
-        self.vector_store = AuraVectorStore()
+        self.vector_store = VectorStore()
 
     def ingest_article(self, article_data: Dict[str, Any]) -> bool:
         """

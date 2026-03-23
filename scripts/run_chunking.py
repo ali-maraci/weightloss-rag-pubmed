@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.chunker import AuraChunker
+from app.core.chunker import Chunker
 from app.utils.config import settings
 
 # Configure logging
@@ -33,7 +33,7 @@ def process_folder(folder_name: str, max_chunk_size: int = 1000, chunk_overlap: 
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    chunker = AuraChunker(max_chunk_size=max_chunk_size, chunk_overlap=chunk_overlap)
+    chunker = Chunker(max_chunk_size=max_chunk_size, chunk_overlap=chunk_overlap)
     
     json_files = list(input_dir.glob("*.json"))
     

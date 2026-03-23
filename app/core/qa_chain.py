@@ -8,11 +8,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from app.utils.config import settings
-from app.core.retriever import AuraRetriever
+from app.core.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 
-QA_SYSTEM_PROMPT = """You are AuraQuery, an expert biomedical AI assistant designed to answer highly complex medical questions using ONLY the provided verified literature.
+QA_SYSTEM_PROMPT = """You are a an expert biomedical AI assistant designed to answer highly complex medical questions using ONLY the provided verified literature.
 
 You must answer the user's question accurately, directly, and comprehensively based explicitly on the Context Provided below.
 
@@ -34,12 +34,12 @@ CONTEXT PROVIDED:
 {context}
 """
 
-class AuraQAChain:
+class QAChain:
     """Orchestrates the final LLM response by running a query through the retriever,
     formatting retrieved chunks into a context block, and generating a cited response."""
 
     def __init__(self, model_name: str = "gpt-4o-mini"):
-        self.retriever = AuraRetriever()
+        self.retriever = Retriever()
         self.llm = ChatOpenAI(
             model=model_name,
             api_key=settings.OPENAI_API_KEY,

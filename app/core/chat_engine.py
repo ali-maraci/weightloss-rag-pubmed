@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from app.utils.config import settings
-from app.core.qa_chain import AuraQAChain
+from app.core.qa_chain import QAChain
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +34,12 @@ New Input: "Can you summarize their findings?"
 Output: "Can you summarize the findings of Smith [PMID: 40648782] and Jones [PMID: 31594285] regarding GLP-1 cardiovascular outcomes?"
 """
 
-class AuraChatEngine:
+class ChatEngine:
     """Wraps the RAG pipeline in a conversational memory layer that reformulates
     queries based on chat history before passing them to the retrieval engine."""
 
     def __init__(self, model_name: str = "gpt-4o-mini"):
-        self.qa_chain = AuraQAChain()
+        self.qa_chain = QAChain()
         self.llm = ChatOpenAI(
             model=model_name,
             api_key=settings.OPENAI_API_KEY,

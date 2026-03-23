@@ -5,26 +5,26 @@ import os
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.qa_chain import AuraQAChain
+from app.core.qa_chain import QAChain
 
 def main():
-    parser = argparse.ArgumentParser(description="AuraQuery RAG Command Line Interface")
+    parser = argparse.ArgumentParser(description="WeightLoss RAG Command Line Interface")
     parser.add_argument(
         "query", 
         type=str, 
-        help="The medical question you want to ask AuraQuery."
+        help="The medical question to search for."
     )
     
     args = parser.parse_args()
     user_query = args.query
     
     print("\n" + "="*80)
-    print("🧠 AuraQuery AI - Processing Query...")
+    print("🧠 WeightLoss RAG - Processing Query...")
     print("="*80)
     print(f"QUESTION: {user_query}")
     print("-" * 80)
     
-    qa_chain = AuraQAChain()
+    qa_chain = QAChain()
     
     try:
         # Run the full RAG pipeline (Parse -> Retrieve -> Format -> Generate)
