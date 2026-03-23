@@ -39,14 +39,14 @@ class EvaluationScore(BaseModel):
 # -----------------------------------------------------------------------
 # Prompts
 # -----------------------------------------------------------------------
-QUESTION_GENERATION_SYSTEM = """You are an expert biomedical research specialist evaluating an LLM chatbot that specializes in Hereditary Hemorrhagic Telangiectasia (HHT).
+QUESTION_GENERATION_SYSTEM = """You are an expert biomedical research specialist evaluating an LLM chatbot that specializes in GLP-1 medications and weight loss (semaglutide, tirzepatide, liraglutide, Ozempic, Wegovy, Mounjaro).
 I will provide you with the JSON abstract/body text of a biomedical article.
 
 Your task is to generate exactly three highly specific, technically detailed, and mutually diverse research questions that can be answered by retrieving the provided article.
 These questions should reflect what a specialized researcher in the field might realistically ask a chatbot.
 
 CRITICAL INSTRUCTION ON STATELESSNESS & GENERALIZATION:
-Many biomedical papers discuss specific cohorts or case studies (e.g., "we treated a 35-year old patient..."). 
+Many biomedical papers discuss specific cohorts or case studies (e.g., "we treated a 35-year old patient...").
 You MUST generalize these specific instances into universal clinical or biological questions.
 * NEVER ask about "the patient", "this cohort", "the authors", or "the study".
 * NEVER use past tense verbs (e.g., was, were, did, revealed, considered). Use present tense (e.g., is, are, does, reveals, considers).
@@ -54,14 +54,14 @@ You MUST generalize these specific instances into universal clinical or biologic
 
 EXAMPLES OF GOOD VS BAD QUESTIONS:
 
-BAD (Violates statelessness & past tense): "What treatment was considered prudent for the patient with concomitant AERD and HHT?"
-GOOD (Generalized & present tense): "What treatment approach is considered prudent for patients presenting with concomitant Aspirin-Exacerbated Respiratory Disease (AERD) and HHT to mitigate bleeding risk?"
+BAD (Violates statelessness & past tense): "What weight loss was achieved in the patient treated with semaglutide?"
+GOOD (Generalized & present tense): "What average body weight reduction is associated with semaglutide treatment in adults with obesity?"
 
-BAD (Violates statelessness & past tense): "What did the nasal endoscopy reveal in the patient with HHT?"
-GOOD (Generalized & present tense): "What are typical nasal endoscopy findings in patients presenting with HHT and AERD?"
+BAD (Violates statelessness & past tense): "What side effects did the participants in the trial experience?"
+GOOD (Generalized & present tense): "What gastrointestinal side effects are commonly reported with tirzepatide use in clinical trials?"
 
-BAD (Violates statelessness/Study referential): "What bioinformatics tools are used in this study to evaluate the ACVRL1 variant?"
-GOOD (Generalized): "What bioinformatics tools and scores are commonly utilized to evaluate the pathogenicity of the ACVRL1:c.1415G>A variant in HHT?"
+BAD (Violates statelessness/Study referential): "What dosing regimen was used in this study for once-weekly semaglutide?"
+GOOD (Generalized): "What once-weekly dosing regimen of semaglutide is evaluated for glycaemic control in adults with type 2 diabetes?"
 
 GROUND TRUTH ANSWERS:
 - Provide the exact correct answer strictly derived from the provided text.
@@ -91,7 +91,7 @@ SCORING CRITERIA:
 * Score 10: Flawless answer. Perfectly accurate compared to Ground Truth, well-written, and explicitly cited.
 
 CRITICAL AUGMENTATIONS TO ENFORCE:
-1. RECALL BONUS (Multi-Hop Synthesis): The chatbot searches 888 papers simultaneously. If the chatbot's answer contains MORE information or slightly DIFFERENT (but valid) updated data compared to the Ground Truth paper, DO NOT PENALIZE IT, provided the core truth isn't contradicted. Reward comprehensive synthesis!
+1. RECALL BONUS (Multi-Hop Synthesis): The chatbot searches ~5,000 papers simultaneously. If the chatbot's answer contains MORE information or slightly DIFFERENT (but valid) updated data compared to the Ground Truth paper, DO NOT PENALIZE IT, provided the core truth isn't contradicted. Reward comprehensive synthesis!
 2. CITATION VERIFICATION PENALTY: The chatbot's primary value is eliminating hallucination via explicit PubMed citations. If the chatbot gives a great answer but FAILS to attach a [PMID: XXXXXX] citation *anywhere* in its response, its score MUST be capped at a maximum of 5/10.
 
 Provide your integer score and a succinct 1-2 sentence reasoning.
@@ -101,7 +101,7 @@ Provide your integer score and a succinct 1-2 sentence reasoning.
 # Classes
 # -----------------------------------------------------------------------
 class RAGEvaluator:
-    def __init__(self, raw_data_dir: str = "data/raw/hht", sample_size: int = 10):
+    def __init__(self, raw_data_dir: str = "data/raw/weightloss", sample_size: int = 10):
         self.raw_data_dir = Path(raw_data_dir)
         self.sample_size = sample_size
         self.chat_engine = ChatEngine()
