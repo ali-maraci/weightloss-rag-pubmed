@@ -109,18 +109,18 @@ Duplicate-safe: checks existing Qdrant points before uploading.
 - Node.js 18+
 - API keys: OpenAI, NCBI Entrez, Qdrant Cloud
 
-Create a `.env` file at the project root:
+Copy `.env.example` to `.env` and fill in your credentials:
 
-```env
-OPENAI_API_KEY=sk-...
-NCBI_API_KEY=your_ncbi_key
-NCBI_EMAIL=your@email.com
-QDRANT_URL=https://your-cluster.qdrant.io
-QDRANT_API_KEY=your_qdrant_key
-LANGCHAIN_TRACING_V2=false
-LANGCHAIN_API_KEY=
-LANGCHAIN_PROJECT=weightloss-rag-pubmed
+```bash
+cp .env.example .env
 ```
+
+| Variable | Where to get it |
+|---|---|
+| `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `NCBI_API_KEY` / `NCBI_EMAIL` | [ncbi.nlm.nih.gov/account](https://www.ncbi.nlm.nih.gov/account/) — key is optional but raises rate limit |
+| `QDRANT_URL` / `QDRANT_API_KEY` | [cloud.qdrant.io](https://cloud.qdrant.io) — free 1GB cluster |
+| `LANGCHAIN_*` | [smith.langchain.com](https://smith.langchain.com) — optional, set `LANGCHAIN_TRACING_V2=false` to disable |
 
 ### Backend
 
