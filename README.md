@@ -244,3 +244,5 @@ If no relevant papers are found in either Index A or the fallback Index B search
 | [Qdrant Cloud](https://cloud.qdrant.io) | Vector database | Free 1GB cluster |
 | [Firebase](https://console.firebase.google.com) | Frontend hosting | Free Spark plan |
 | [LangSmith](https://smith.langchain.com) | Tracing (optional) | Free tier available |
+
+Thanks to https://github.com/ehsan-abdi/auraquery-rag-pubmed
