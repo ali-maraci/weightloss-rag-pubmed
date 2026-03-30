@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str = ""
 
     # -------------------------
+    # Evaluation Judge LLM
+    # -------------------------
+    EVAL_JUDGE_PROVIDER: str = "openai"   # "openai" or "groq"
+    EVAL_JUDGE_MODEL: str = "gpt-4o-mini"
+
+    # -------------------------
     # LangChain Tracing
     # -------------------------
     LANGCHAIN_TRACING_V2: bool = False

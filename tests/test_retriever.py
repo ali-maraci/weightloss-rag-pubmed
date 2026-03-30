@@ -280,7 +280,7 @@ class TestBuildQdrantFilter:
         retriever = make_retriever()
         parsed_query = ParsedQuery(
             optimized_query="query",
-            metadata_filters=MetadataFilters(publication_year=2022, is_human=True),
+            metadata_filters=MetadataFilters(publication_year=2022, first_author_lastname="Smith"),
         )
 
         result = retriever._build_qdrant_filter(parsed_query)
@@ -289,4 +289,4 @@ class TestBuildQdrantFilter:
         assert len(result.must) == 2
         keys = {c.key for c in result.must}
         assert "metadata.pub_year" in keys
-        assert "metadata.is_human" in keys
+        assert "metadata.first_author_lastname" in keys

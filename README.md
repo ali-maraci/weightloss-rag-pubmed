@@ -263,16 +263,35 @@ Samples 33 random articles and uses `gpt-4o-mini` to generate 3 Q&A pairs per ar
 PYTHONPATH=. python scripts/run_evaluation.py evaluate 20
 ```
 
-Samples 20 questions from the test bank, gets chatbot answers, and scores them using an independent judge LLM (`llama-3.3-70b-versatile` via Groq to prevent self-preference bias).
-
-**Metrics reported:**
-- Average score (0-10), median, perfect scores, zero scores
-- Citation presence rate (% of answers with any `[PMID: ...]`)
-- Retrieval recall (% of answers citing the source article's PMID)
-- Average citations per answer
-- Score distribution (bucketed histogram)
+Samples 20 questions from the test bank, gets chatbot answers, and scores them using a judge LLM (configurable via `EVAL_JUDGE_PROVIDER` / `EVAL_JUDGE_MODEL` in `.env` — defaults to OpenAI `gpt-4o-mini`).
 
 Output: `data/evaluation_results.csv`
+
+### Baseline results (March 2026, 20 questions, gpt-4o-mini judge)
+
+| Metric | Value |
+|---|---|
+| **Average Score** | 6.20 / 10.00 |
+| **Perfect Scores (10/10)** | 3 (15%) |
+| **Zero Scores / Failures** | 1 (5%) |
+| **Citation Presence Rate** | 95% (19/20 answers have citations) |
+| **Retrieval Recall** | 55% (11/20 source PMIDs found in answer) |
+| **Avg Citations per Answer** | 2.6 |
+| **Avg Response Latency** | 11.7s |
+
+**Score distribution:**
+```
+   0:   1 █
+ 1-4:   3 ███
+ 5-7:   7 ███████
+ 8-9:   6 ██████
+  10:   3 ███
+```
+
+**Key observations:**
+- **95% citation rate** — nearly all answers include PubMed citations, reflecting strong prompt adherence
+- **55% retrieval recall** — the system finds the source article just over half the time, expected given the 5,000-paper corpus and the diversity of questions
+- **6.2 average score** — solid baseline with room to improve via better retrieval (hybrid search tuning, query expansion) and more targeted reranking
 
 ### Compare evaluation runs
 

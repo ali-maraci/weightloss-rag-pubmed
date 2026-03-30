@@ -11,7 +11,6 @@ import time
 
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 # Ensure the root project directory is in the Python path
@@ -119,12 +118,20 @@ class RAGEvaluator:
         ])
         self.generator_chain = self.generator_prompt | self.generator_llm
         
-        # Judge LLM (Use llama-3.3-70b-versatile via Groq to prevent self-preference bias)
-        self.judge_llm = ChatGroq(
-            model="llama-3.3-70b-versatile", 
-            temperature=0.0,
-            api_key=settings.GROQ_API_KEY
-        ).with_structured_output(EvaluationScore)
+        # Judge LLM — configurable via EVAL_JUDGE_PROVIDER / EVAL_JUDGE_MODEL in .env
+        if settings.EVAL_JUDGE_PROVIDER == "groq":
+            from langchain_groq import ChatGroq
+            self.judge_llm = ChatGroq(
+                model=settings.EVAL_JUDGE_MODEL,
+                temperature=0.0,
+                api_key=settings.GROQ_API_KEY
+            ).with_structured_output(EvaluationScore)
+        else:
+            self.judge_llm = ChatOpenAI(
+                model=settings.EVAL_JUDGE_MODEL,
+                temperature=0.0,
+                api_key=settings.OPENAI_API_KEY
+            ).with_structured_output(EvaluationScore)
         self.judge_prompt = ChatPromptTemplate.from_messages([
             ("system", JUDGE_SYSTEM_PROMPT),
             ("human", "Question: {question}\n\nGround Truth: {ground_truth}\n\nChatbot Answer: {chatbot_answer}")

@@ -148,20 +148,9 @@ class Retriever:
                     match=models.MatchValue(value=meta.first_author_lastname)
                 )
             )
-        if meta.is_human is not None:
-            must_conditions.append(
-                models.FieldCondition(
-                    key="metadata.is_human",
-                    match=models.MatchValue(value=meta.is_human)
-                )
-            )
-        if meta.is_animal is not None:
-            must_conditions.append(
-                models.FieldCondition(
-                    key="metadata.is_animal",
-                    match=models.MatchValue(value=meta.is_animal)
-                )
-            )
+        # Note: is_human / is_animal filters are skipped because Qdrant
+        # collections don't have payload indexes for these boolean fields.
+        # To enable, create indexes first via setup_qdrant_collections.py.
 
         if not must_conditions:
             return None
