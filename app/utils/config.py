@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # LangChain Tracing
     # -------------------------
     LANGCHAIN_TRACING_V2: bool = False
-    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGCHAIN_ENDPOINT: str = "https://eu.api.smith.langchain.com"
     LANGCHAIN_API_KEY: str = ""
     LANGCHAIN_PROJECT: str = "weightloss-rag-pubmed"
 

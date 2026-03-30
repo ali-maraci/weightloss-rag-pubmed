@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import re
 import sys
 import os
 from pathlib import Path
@@ -248,6 +249,13 @@ class RAGEvaluator:
             chatbot_answer = self.chat_engine.chat(user_input=qa.question, session_id=session_id)
             strategy = "Unknown"
             latency = time.time() - start_time
+
+            # Extract PMIDs cited in the chatbot answer
+            cited_pmids = set(re.findall(r'\[PMID:\s*(\d+)\]', chatbot_answer))
+            has_citations = len(cited_pmids) > 0
+
+            # Check if the source article's PMID was retrieved (retrieval recall)
+            source_pmid_retrieved = pmid in [str(p) for p in cited_pmids]
             
             # 2. Score Answer with Judge LLM
             try:
@@ -273,7 +281,11 @@ class RAGEvaluator:
                 "retrieval_strategy": strategy,
                 "latency_sec": round(latency, 2),
                 "score": score,
-                "reasoning": reasoning
+                "reasoning": reasoning,
+                "cited_pmids": ",".join(sorted(cited_pmids)),
+                "num_citations": len(cited_pmids),
+                "has_citations": has_citations,
+                "source_pmid_retrieved": source_pmid_retrieved,
             })
             
             # Respect rate limits
@@ -323,6 +335,36 @@ class RAGEvaluator:
         print(f"Average Response Latency  : {average_latency:.2f} seconds")
         print(f"Perfect Scores (10/10)    : {perfect_scores} ({perfect_scores/valid_questions*100:.1f}%)")
         print(f"Zero Scores / Failures    : {zero_scores} ({zero_scores/valid_questions*100:.1f}%)")
+        print("="*50)
+
+        # Per-dimension metrics
+        cited_results = [r for r in valid_results if r.get('has_citations')]
+        citation_presence_rate = len(cited_results) / valid_questions * 100 if valid_questions else 0
+
+        retrieval_recall_hits = sum(1 for r in valid_results if r.get('source_pmid_retrieved'))
+        retrieval_recall = retrieval_recall_hits / valid_questions * 100 if valid_questions else 0
+
+        avg_citations = sum(r.get('num_citations', 0) for r in valid_results) / valid_questions if valid_questions else 0
+
+        # Score distribution
+        score_buckets = {"0": 0, "1-4": 0, "5-7": 0, "8-9": 0, "10": 0}
+        for r in valid_results:
+            s = r['score']
+            if s == 0: score_buckets["0"] += 1
+            elif s <= 4: score_buckets["1-4"] += 1
+            elif s <= 7: score_buckets["5-7"] += 1
+            elif s <= 9: score_buckets["8-9"] += 1
+            else: score_buckets["10"] += 1
+
+        print("\nPER-DIMENSION METRICS")
+        print("-"*50)
+        print(f"Citation Presence Rate    : {citation_presence_rate:.1f}% ({len(cited_results)}/{valid_questions} answers have citations)")
+        print(f"Retrieval Recall          : {retrieval_recall:.1f}% ({retrieval_recall_hits}/{valid_questions} source PMIDs found in answer)")
+        print(f"Avg Citations per Answer  : {avg_citations:.1f}")
+        print(f"\nScore Distribution:")
+        for bucket, count in score_buckets.items():
+            bar = "█" * count
+            print(f"  {bucket:>4}: {count:>3} {bar}")
         print("="*50)
 
 if __name__ == "__main__":

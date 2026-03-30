@@ -2,12 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 import { IconButton, TextField } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { streamMessage } from './services/chatService';
+import type { SourceDoc } from './services/chatService';
+import type { ChatFilters, EvidenceTableRow } from './services/chatService';
+import SourcePanel from './components/SourcePanel';
+import EvidenceTable from './components/EvidenceTable';
+import FilterBar from './components/FilterBar';
 import './App.scss';
 
 interface Message {
   role: 'user' | 'ai';
   content: string;
   formattedContent?: string;
+  sources?: SourceDoc[];
+  evidenceTable?: EvidenceTableRow[];
 }
 
 function formatMarkdownAndCitations(text: string): string {
@@ -35,6 +42,7 @@ export default function App() {
   const [userInput, setUserInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState('');
+  const [activeFilters, setActiveFilters] = useState<ChatFilters>({});
 
   const sessionId = useRef('wl_session_' + Math.random().toString(36).substring(7));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -62,11 +70,22 @@ export default function App() {
     });
 
     try {
-      const stream = streamMessage(query, sessionId.current);
+      const stream = streamMessage(query, sessionId.current, activeFilters);
       let accumulatedText = '';
 
       for await (const event of stream) {
-        if (event.type === 'clear_tokens') {
+        if (event.type === 'safety') {
+          accumulatedText += (event.disclaimer || '') + '\n\n';
+          setMessages(msgs => {
+            const next = [...msgs];
+            next[aiIndex] = {
+              role: 'ai',
+              content: accumulatedText,
+              formattedContent: formatMarkdownAndCitations(accumulatedText),
+            };
+            return next;
+          });
+        } else if (event.type === 'clear_tokens') {
           accumulatedText = '';
           setMessages(msgs => {
             const next = [...msgs];
@@ -75,6 +94,18 @@ export default function App() {
           });
         } else if (event.type === 'status') {
           setThinkingStatus(event.message || 'Processing...');
+        } else if (event.type === 'sources' && event.docs) {
+          setMessages(msgs => {
+            const next = [...msgs];
+            next[aiIndex] = { ...next[aiIndex], sources: event.docs };
+            return next;
+          });
+        } else if (event.type === 'evidence_table' && event.rows) {
+          setMessages(msgs => {
+            const next = [...msgs];
+            next[aiIndex] = { ...next[aiIndex], evidenceTable: event.rows };
+            return next;
+          });
         } else if (event.type === 'token') {
           setThinkingStatus('');
           accumulatedText += (event.content || '');
@@ -158,14 +189,26 @@ export default function App() {
               style={{ display: msg.role === 'ai' && !msg.content ? 'none' : 'flex' }}
             >
               {msg.role === 'ai' && msg.content && aiAvatar}
-              {msg.content && (
-                <div className="message-bubble">
-                  {msg.role === 'user' ? (
-                    msg.content
-                  ) : (
-                    <div dangerouslySetInnerHTML={{ __html: msg.formattedContent || msg.content }} />
+              {msg.role === 'ai' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                  {msg.content && (
+                    <div className="message-bubble">
+                      <div dangerouslySetInnerHTML={{ __html: msg.formattedContent || msg.content }} />
+                    </div>
+                  )}
+                  {msg.sources && msg.sources.length > 0 && (
+                    <SourcePanel sources={msg.sources} filters={activeFilters} />
+                  )}
+                  {msg.evidenceTable && msg.evidenceTable.length > 0 && (
+                    <EvidenceTable rows={msg.evidenceTable} />
                   )}
                 </div>
+              ) : (
+                msg.content && (
+                  <div className="message-bubble">
+                    {msg.content}
+                  </div>
+                )
               )}
             </div>
           ))}
@@ -183,6 +226,7 @@ export default function App() {
           )}
         </div>
 
+        <FilterBar onFiltersChange={setActiveFilters} />
         <div className="input-area">
           <TextField
             multiline

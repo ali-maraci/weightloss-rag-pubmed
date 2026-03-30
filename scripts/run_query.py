@@ -5,6 +5,9 @@ import os
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.core.qa_chain import QAChain
 
 def main():

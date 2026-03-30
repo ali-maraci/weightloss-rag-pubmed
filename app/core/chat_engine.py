@@ -80,24 +80,24 @@ class ChatEngine:
         logger.info(f"Rewritten Query: '{rewritten_query}'")
         return rewritten_query
         
-    def chat(self, user_input: str, session_id: str = "default") -> str:
+    def chat(self, user_input: str, session_id: str = "default", filters: dict = None) -> str:
         """Non-streaming conversational RAG."""
         self._ensure_session(session_id)
         standalone_query = self._reformulate_query(user_input, session_id)
         self.sessions[session_id].append(HumanMessage(content=user_input))
-        answer, strategy = self.qa_chain.query(standalone_query)
+        answer, strategy = self.qa_chain.query(standalone_query, filters=filters)
         self.sessions[session_id].append(AIMessage(content=answer))
         self._trim_session(session_id)
         return answer
 
-    def stream_chat(self, user_input: str, session_id: str = "default"):
+    def stream_chat(self, user_input: str, session_id: str = "default", filters: dict = None):
         """Streaming conversational RAG. Yields SSE json strings."""
         self._ensure_session(session_id)
         yield json.dumps({"type": "status", "message": "Analyzing query context..."}) + "\n\n"
         standalone_query = self._reformulate_query(user_input, session_id)
         self.sessions[session_id].append(HumanMessage(content=user_input))
         full_answer = ""
-        for chunk_str in self.qa_chain.stream_query(standalone_query):
+        for chunk_str in self.qa_chain.stream_query(standalone_query, filters=filters):
             yield chunk_str
             try:
                 data = json.loads(chunk_str.strip())
